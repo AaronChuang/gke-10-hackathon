@@ -1,0 +1,10 @@
+fastapi~=0.116.1
+uvicorn[standard]~=0.35.0
+crewai~=0.186.1
+crewai-tools~=0.71.0
+python-dotenv~=1.1.1
+
+google-cloud-firestore~=2.21.0
+google-cloud-pubsub~=2.31.1
+pydantic~=2.11.8
+langchain-google-vertexai~=2.1.0

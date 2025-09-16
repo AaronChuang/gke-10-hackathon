@@ -1,0 +1,25 @@
+.git
+.gitignore
+
+Dockerfile
+
+venv
+.env
+
+pycache/
+*.pyc
+
+.idea/
+.vscode/
+
+*.sqlite3
+*.db
+
+google-credentials.json
+
+.DS_Store
+Thumbs.db
+
+Log files
+*.log
+

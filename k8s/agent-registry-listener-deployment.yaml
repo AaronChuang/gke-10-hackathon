@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-registry-listener
+  namespace: ai-agents
+  labels:
+    app: agent-registry-listener
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-registry-listener
+  template:
+    metadata:
+      labels:
+        app: agent-registry-listener
+    spec:
+      serviceAccountName: ai-agent-ksa
+      containers:
+        - name: agent-registry-listener-container
+          image: asia-east1-docker.pkg.dev/gke-10-hackathon-471902/ai-agents-repo/ai-agent-base:latest
+          command: ["python", "/workspace/app/shared_crew_lib/services/agent_registry_listener.py"]
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          env:
+            - name: GCP_PROJECT_ID
+              value: "gke-10-hackathon-471902"
+            - name: GCP_FIRESTORE_NAME
+              value: "gke-10-hackathon"
+            - name: AGENT_REGISTRY_SUBSCRIPTION_ID
+              value: "agent-registry-updates-sub"
+            - name: PYTHONPATH
+              value: "/workspace"
+          workingDir: /workspace

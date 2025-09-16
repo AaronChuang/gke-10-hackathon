@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orchestrator
+  namespace: ai-agents
+  labels:
+    app: orchestrator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orchestrator
+  template:
+    metadata:
+      labels:
+        app: orchestrator
+    spec:
+      serviceAccountName: ai-agent-ksa
+      containers:
+        - name: orchestrator-container
+          image: asia-east1-docker.pkg.dev/gke-10-hackathon-471902/ai-agents-repo/ai-agent-base:latest
+          command: ["uvicorn", "app.workers.orchestrator:app", "--host", "0.0.0.0", "--port", "8000"]
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          env:
+            - name: GCP_PROJECT_ID
+              value: "gke-10-hackathon-471902"
+            - name: GCP_FIRESTORE_NAME
+              value: "gke-10-hackathon"
+            - name: PROXY_AGENT_SUBSCRIPTION_ID
+              value: "proxy-agent-sub"
+            - name: AGENT_REGISTRY_SUBSCRIPTION_ID
+              value: "agent-registry-updates-sub"
+            - name: GOOGLE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ai-agent-secrets
+                  key: google-api-key
+            - name: PYTHONPATH
+              value: "/workspace"
+          workingDir: /workspace
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: orchestrator-service
+  namespace: ai-agents
+  annotations:
+    cloud.google.com/backend-config: '{"default": "orchestrator-backend-config"}'
+spec:
+  type: ClusterIP
+  selector:
+    app: orchestrator
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000

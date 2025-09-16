@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+  namespace: ai-agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+      containers:
+        - name: dashboard-container
+          image: asia-east1-docker.pkg.dev/gke-10-hackathon-471902/ai-agents-repo/ai-agent-admin-ui:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-service
+  namespace: ai-agents
+spec:
+  type: ClusterIP
+  selector:
+    app: dashboard
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

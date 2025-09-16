@@ -1,0 +1,10 @@
+venv
+.idea
+__pycache__
+
+google-credentials.json
+
+.env
+.DS_Store
+
+src/firebaseConfig.ts

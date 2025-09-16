@@ -1,0 +1,25 @@
+{
+  "name": "ai-agent-dashboard",
+  "version": "1.0.0",
+  "description": "AI Agent 任務監控儀表板 - Vue 3 + TypeScript + Sass",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:check": "vue-tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "vue": "^3.4.0",
+    "firebase": "^10.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "sass": "^1.77.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.0",
+    "vue-tsc": "^2.0.0"
+  }
+}

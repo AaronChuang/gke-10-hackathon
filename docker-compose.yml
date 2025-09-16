@@ -1,0 +1,43 @@
+services:
+  orchestrator:
+    build: .
+    container_name: orchestrator-1
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./google-credentials.json:/workspace/google-credentials.json:ro
+    command: uvicorn app.workers.orchestrator:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - ai-agents-net
+
+  proxy-agent:
+    build: .
+    container_name: proxy-agent-1
+    env_file:
+      - .env
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./google-credentials.json:/workspace/google-credentials.json:ro
+    command: uvicorn app.workers.proxy:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - ai-agents-net
+    restart: on-failure
+
+  agent-registry-listener:
+    build: .
+    container_name: agent-registry-listener-1
+    env_file:
+      - .env
+    volumes:
+      - ./google-credentials.json:/workspace/google-credentials.json:ro
+    command: python app/shared_crew_lib/services/agent_registry_listener.py
+    networks:
+      - ai-agents-net
+    restart: on-failure
+
+networks:
+  ai-agents-net:
+    driver: bridge

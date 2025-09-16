@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: omni-agent
+  namespace: ai-agents
+  labels:
+    app: omni-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: omni-agent
+  template:
+    metadata:
+      labels:
+        app: omni-agent
+    spec:
+      serviceAccountName: ai-agent-ksa
+      containers:
+        - name: omni-agent-container
+          image: asia-east1-docker.pkg.dev/gke-10-hackathon-471902/ai-agents-repo/ai-agent-base:latest
+          command: ["python", "/workspace/app/workers/omni_agent_worker.py"]
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          env:
+            - name: GCP_PROJECT_ID
+              value: "gke-10-hackathon-471902"
+            - name: GCP_FIRESTORE_NAME
+              value: "gke-10-hackathon"
+            - name: AGENT_SUBSCRIPTION_ID
+              value: "omni-agent-sub"
+            - name: GOOGLE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ai-agent-secrets
+                  key: google-api-key
+            - name: PYTHONPATH
+              value: "/workspace"
+          workingDir: /workspace

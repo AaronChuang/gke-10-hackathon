@@ -1,0 +1,89 @@
+@use 'variables' as *;
+
+// 全域樣式
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: $bg-primary;
+  color: $text-secondary;
+  line-height: 1.6;
+}
+
+// 狀態徽章樣式
+.status-badge {
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-full;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  
+  &.status-COMPLETED {
+    background-color: $status-completed;
+    color: $text-primary;
+  }
+  
+  &.status-RUNNING,
+  &.status-TECH_ANALYST_RUNNING,
+  &.status-ARCHITECT_PENDING,
+  &.status-ARCHITECT_RUNNING,
+  &.status-STYLIST_RUNNING {
+    background-color: $status-running;
+    color: $text-primary;
+  }
+  
+  &.status-PENDING {
+    background-color: $status-pending;
+    color: $text-primary;
+  }
+  
+  &.status-FAILED {
+    background-color: $status-failed;
+    color: $text-primary;
+  }
+  
+  &.blinking {
+    animation: blink 1.5s infinite ease-in-out;
+  }
+}
+
+// 動畫
+@keyframes blink {
+  0%, 100% { 
+    opacity: 1; 
+  }
+  50% { 
+    opacity: 0.5; 
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// 工具類別
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.transition-colors {
+  transition: background-color $transition-normal, border-color $transition-normal, color $transition-normal;
+}
+
+.hover-bg-gray-800:hover {
+  background-color: $bg-hover;
+}
