@@ -1,47 +1,47 @@
 <template>
   <div class="agent-management">
     <div class="agent-header">
-      <h2 class="section-title">代理人管理</h2>
+      <h2 class="section-title">
+        <i class="fas fa-users"></i>
+        {{ $t('agents.title') }}
+      </h2>
+      <p class="section-subtitle">{{ $t('agents.subtitle') }}</p>
       <button @click="showCreateModal = true" class="create-btn">
         <i class="fas fa-plus"></i>
-        創建代理人
+        {{ $t('agents.createButton') }}
       </button>
     </div>
 
     <div class="stats-overview">
       <div class="stat-card">
         <div class="stat-value">{{ totalAgents }}</div>
-        <div class="stat-label">總代理人數</div>
+        <div class="stat-label">{{ $t('agents.stats.total') }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ activeAgents }}</div>
-        <div class="stat-label">活躍代理人</div>
+        <div class="stat-label">{{ $t('agents.stats.active') }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ creatingAgents }}</div>
-        <div class="stat-label">創建中</div>
+        <div class="stat-label">{{ $t('agents.stats.creating') }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ failedAgents }}</div>
-        <div class="stat-label">失敗</div>
+        <div class="stat-label">{{ $t('agents.stats.failed') }}</div>
       </div>
     </div>
 
     <div class="agent-table-container">
       <div class="table-header">
-        <h3>代理人列表</h3>
+        <h3>{{ $t('agents.table.title') }}</h3>
         <div class="table-controls">
           <select v-model="statusFilter" class="filter-select">
-            <option value="">所有狀態</option>
-            <option value="ACTIVE">活躍</option>
-            <option value="INACTIVE">非活躍</option>
-            <option value="CREATING">創建中</option>
-            <option value="FAILED">失敗</option>
+            <option value="">{{ $t('agents.table.allStatus') }}</option>
+            <option value="ACTIVE">{{ $t('agents.status.active') }}</option>
+            <option value="INACTIVE">{{ $t('agents.status.inactive') }}</option>
+            <option value="CREATING">{{ $t('agents.status.creating') }}</option>
+            <option value="FAILED">{{ $t('agents.status.failed') }}</option>
           </select>
-          <button @click="refreshAgents" class="refresh-btn">
-            <i class="fas fa-sync-alt"></i>
-            刷新
-          </button>
         </div>
       </div>
 
@@ -49,13 +49,13 @@
         <table class="agent-table">
           <thead>
             <tr>
-              <th>代理人名稱</th>
-              <th>描述</th>
-              <th>狀態</th>
-              <th>能力標籤</th>
-              <th>Pub/Sub 主題</th>
-              <th>創建時間</th>
-              <th>操作</th>
+              <th>{{ $t('agents.table.name') }}</th>
+              <th>{{ $t('agents.table.description') }}</th>
+              <th>{{ $t('agents.table.status') }}</th>
+              <th>{{ $t('agents.table.capabilities') }}</th>
+              <th>{{ $t('agents.table.topic') }}</th>
+              <th>{{ $t('agents.table.created') }}</th>
+              <th>{{ $t('agents.table.actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -63,8 +63,8 @@
               <td class="agent-name">
                 <div class="name-content">
                   <i class="fas fa-robot agent-icon"></i>
-                  <span class="name-text">{{ agent.name }}</span>
-                  <span v-if="agent.name === 'OrchestratorAgent'" class="system-badge">系統</span>
+                  <span class="name-text">{{ getDisplayName(agent.name) }}</span>
+                  <span v-if="isSystemAgent(agent.name)" class="system-badge">{{ $t('common.system') }}</span>
                 </div>
               </td>
               <td class="agent-description">
@@ -111,7 +111,7 @@
                 </button>
                 <button 
                   @click="toggleAgentStatus(agent)" 
-                  :disabled="agent.status === 'CREATING' || agent.name === 'OrchestratorAgent'"
+                  :disabled="agent.status === 'CREATING' || isSystemAgent(agent.name)"
                   :class="['action-btn', agent.status === 'ACTIVE' ? 'deactivate-btn' : 'activate-btn']"
                   :title="agent.status === 'ACTIVE' ? '停用' : '啟用'"
                 >
@@ -119,7 +119,7 @@
                 </button>
                 <button 
                   @click="deleteAgent(agent)" 
-                  :disabled="agent.status === 'CREATING' || agent.name === 'OrchestratorAgent'"
+                  :disabled="agent.status === 'CREATING' || isSystemAgent(agent.name)"
                   class="action-btn delete-btn"
                   title="刪除"
                 >
@@ -131,7 +131,6 @@
         </table>
       </div>
     </div>
-    <!-- 創建代理人模態框 -->
     <div v-if="showCreateModal" class="modal-overlay" @click="closeCreateModal">
       <div class="modal-content large-modal" @click.stop>
         <div class="modal-header">
@@ -237,12 +236,14 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Agent } from '@/types/agent'
 
 interface Props {
   agents: Agent[]
 }
 
+const { t } = useI18n()
 const props = defineProps<Props>()
 const emit = defineEmits<{
   refresh: []
@@ -267,6 +268,20 @@ const filteredAgents = computed(() => {
   return props.agents.filter(agent => agent.status === statusFilter.value)
 })
 
+// Display name mapping for system agents
+const getDisplayName = (name: string) => {
+  const nameMap: Record<string, string> = {
+    'ProxyAgent': 'Customer Service Agent',
+    'OrchestratorAgent': 'Orchestrator Agent'
+  }
+  return nameMap[name] || name
+}
+
+// Check if agent is a system agent
+const isSystemAgent = (name: string) => {
+  return name === 'OrchestratorAgent' || name === 'ProxyAgent'
+}
+
 const totalAgents = computed(() => props.agents.length)
 const activeAgents = computed(() => props.agents.filter(a => a.status === 'ACTIVE').length)
 const creatingAgents = computed(() => props.agents.filter(a => a.status === 'CREATING').length)
@@ -290,13 +305,8 @@ const getStatusClass = (status: string) => {
 }
 
 const getStatusText = (status: string) => {
-  const statusMap: Record<string, string> = {
-    'ACTIVE': '活躍',
-    'INACTIVE': '非活躍',
-    'CREATING': '創建中',
-    'FAILED': '失敗'
-  }
-  return statusMap[status] || status
+  const statusKey = status.toLowerCase()
+  return t(`agents.status.${statusKey}`) || status
 }
 
 const truncateText = (text: string, maxLength: number) => {
@@ -308,11 +318,7 @@ const formatTime = (timestamp: number) => {
   return new Date(timestamp * 1000).toLocaleString('zh-TW')
 }
 
-const refreshAgents = () => {
-  emit('refresh')
-}
-
-// 代理人操作函數
+// Agent operation functions
 const viewAgentDetails = (agent: Agent) => {
   // 顯示代理人詳情模態框
   alert(`代理人詳情：\n名稱：${agent.name}\n描述：${agent.description}\n狀態：${agent.status}\n能力：${agent.capabilities.join(', ')}\n創建時間：${formatTime(agent.created_at)}`)
@@ -357,8 +363,8 @@ const toggleAgentStatus = async (agent: Agent) => {
 }
 
 const deleteAgent = async (agent: Agent) => {
-  if (agent.name === 'OrchestratorAgent') {
-    alert('無法刪除系統核心代理人')
+  if (isSystemAgent(agent.name)) {
+    alert('Cannot delete system agents')
     return
   }
 
@@ -448,8 +454,10 @@ const submitCreateAgent = async () => {
 .agent-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: $spacing-xl;
+  flex-wrap: wrap;
+  gap: $spacing-md;
 }
 
 .section-title {
@@ -457,6 +465,20 @@ const submitCreateAgent = async () => {
   font-weight: 600;
   color: $text-primary;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  
+  i {
+    color: #3b82f6;
+  }
+}
+
+.section-subtitle {
+  color: $text-muted;
+  font-size: 0.875rem;
+  margin: $spacing-xs 0 0 0;
+  flex-basis: 100%;
 }
 
 .create-btn {
@@ -561,12 +583,22 @@ const submitCreateAgent = async () => {
 .agent-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 800px;
   
   th, td {
     padding: $spacing-md;
     text-align: left;
     border-bottom: 1px solid #f3f4f6;
   }
+  
+  // Set minimum widths for columns
+  th:nth-child(1), td:nth-child(1) { min-width: 180px; } // Name
+  th:nth-child(2), td:nth-child(2) { min-width: 200px; } // Description  
+  th:nth-child(3), td:nth-child(3) { min-width: 100px; } // Status
+  th:nth-child(4), td:nth-child(4) { min-width: 150px; } // Capabilities
+  th:nth-child(5), td:nth-child(5) { min-width: 120px; } // Topic
+  th:nth-child(6), td:nth-child(6) { min-width: 120px; } // Created
+  th:nth-child(7), td:nth-child(7) { min-width: 120px; } // Actions
   
   th {
     background-color: #f9fafb;
@@ -630,6 +662,8 @@ const submitCreateAgent = async () => {
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 500;
+  white-space: nowrap;
+  display: inline-block;
   
   &.status-active {
     background-color: #10b981;

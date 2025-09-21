@@ -1,0 +1,162 @@
+{
+  "app": {
+    "title": "Online Boutique Headquarters",
+    "subtitle": "AI-Driven E-commerce Management Center"
+  },
+  "navigation": {
+    "strategy": "Strategy",
+    "agents": "Agents",
+    "knowledge": "Knowledge Base",
+    "operations": "Operations"
+  },
+  "strategy": {
+    "title": "Business Consultant AI - Strategic Advice for Your E-commerce Business",
+    "subtitle": "Consult our professional business consultant agent for market trends, organizational development, and capability expansion advice",
+    "welcome": {
+      "title": "Welcome to Business Consulting Service",
+      "description": "I am your dedicated business consultant AI, providing the following advice:",
+      "marketTrends": {
+        "title": "Market Trend Analysis",
+        "description": "Based on the latest fashion trends, what types of products should you introduce?"
+      },
+      "organizationalDevelopment": {
+        "title": "Organizational Development Advice",
+        "description": "To improve customer satisfaction, what kind of AI department should the company add?"
+      },
+      "capabilityExpansion": {
+        "title": "Capability Expansion Advice",
+        "description": "To make the customer service department more efficient, what tools should be added?"
+      }
+    },
+    "chat": {
+      "placeholder": "Please enter your business questions or requirements...",
+      "send": "Send",
+      "hint": "Press Enter to send, Shift + Enter for new line",
+      "you": "You",
+      "consultant": "Business Consultant AI",
+      "typing": "Typing..."
+    }
+  },
+  "agents": {
+    "title": "HR - Agent Management",
+    "subtitle": "Create, edit, enable/disable company's professional departments",
+    "createButton": "Create New Agent",
+    "stats": {
+      "total": "Total Agents",
+      "active": "Active Agents",
+      "creating": "Creating",
+      "failed": "Failed"
+    },
+    "table": {
+      "title": "Agent List",
+      "refresh": "Refresh",
+      "allStatus": "All Status",
+      "name": "Name",
+      "description": "Description",
+      "status": "Status",
+      "capabilities": "Capabilities",
+      "topic": "PubSub Topic",
+      "created": "Created",
+      "actions": "Actions",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "creating": "Creating",
+      "failed": "Failed"
+    },
+    "modal": {
+      "create": "Create Agent",
+      "edit": "Edit Agent",
+      "close": "Close",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "name": "Agent Name",
+      "namePlaceholder": "e.g., Fashion Stylist Agent",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe the agent's role and capabilities...",
+      "model": "AI Model",
+      "tools": "Available Tools",
+      "enable": "Enable this agent"
+    }
+  },
+  "operations": {
+    "title": "Operations Center - Tasks & Conversations Management",
+    "subtitle": "Monitor all task workflows and customer conversation history, track costs and execution logs",
+    "tabs": {
+      "tasks": "Task Management",
+      "conversations": "Conversation History"
+    },
+    "stats": {
+      "total": "Total Tasks",
+      "pending": "Pending",
+      "completed": "Completed",
+      "tokens": "Total Token Usage"
+    },
+    "tasks": {
+      "table": {
+        "taskId": "Task ID",
+        "status": "Status",
+        "creator": "Creator",
+        "currentDept": "Current Department",
+        "tokens": "Token Usage",
+        "created": "Created Time",
+        "actions": "Actions",
+        "view": "View"
+      },
+      "status": {
+        "pending": "Pending",
+        "running": "Running",
+        "completed": "Completed",
+        "failed": "Failed"
+      },
+      "modal": {
+        "title": "Task Details",
+        "close": "Close",
+        "status": "Status:",
+        "created": "Created Time:",
+        "tokens": "Token Usage:",
+        "executionLog": "Execution Log"
+      }
+    },
+    "conversations": {
+      "messageCount": "messages",
+      "tokens": "tokens",
+      "lastMessage": "Last Message:",
+      "viewDetails": "View Details",
+      "anonymous": "Anonymous User",
+      "details": "Conversation Details",
+      "user": "User",
+      "agent": "Agent",
+      "lastUpdate": "Last Update",
+      "messages": "Messages"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "close": "Close",
+    "confirm": "Confirm",
+    "system": "System",
+    "unassigned": "Unassigned",
+    "unknown": "Unknown",
+    "unset": "Not set",
+    "switchLanguage": "Switch Language"
+  },
+  "loading": {
+    "tasks": "Loading task data...",
+    "agents": "Loading agent data...",
+    "knowledge": "Loading knowledge base...",
+    "strategy": "Initializing business consultant...",
+    "default": "Loading..."
+  }
+}

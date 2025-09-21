@@ -1,61 +1,81 @@
 import os
 import uuid
 from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from datetime import datetime
 from app.shared_crew_lib.clients import gcp_clients
 from app.shared_crew_lib.agents.proxy_agent import ProxyAgent
-from app.shared_crew_lib.schemas.conversation_request import ConversationRequest, ConversationResponse, \
-    ConversationMessage
-from app.shared_crew_lib.schemas.firestore_task import FirestoreTask
+from app.shared_crew_lib.schemas.conversation_request import ConversationRequest, ConversationResponse
+from app.shared_crew_lib.schemas.conversation import MessageSender
+from app.shared_crew_lib.services.conversation_service import ConversationService
 from app.shared_crew_lib.services.agent_communication_service import AgentCommunicationService
 import logging
 
 load_dotenv()
 
-# 設置日誌
+PROJECT_ID = os.getenv("GCP_PROJECT_ID")
+
+if not PROJECT_ID:
+    raise RuntimeError("Required environment variable not set: GCP_PROJECT_ID")
+
+# Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="ProxyAgent - 智能對話代理人",
-    description="專注於客戶對話的智能代理人，具備任務路由能力"
+    title="ProxyAgent - Intelligent Conversation Agent",
+    description="Intelligent agent focused on customer conversations with task routing capabilities"
 )
 
-PROJECT_ID = os.getenv("GCP_PROJECT_ID")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://35.236.185.81"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-if not PROJECT_ID:
-    raise RuntimeError("必要的環境變數未設定：GCP_PROJECT_ID")
 
-# 初始化客戶端
 db = gcp_clients.get_firestore_client()
 publisher = gcp_clients.get_publisher_client()
 
-# 初始化服務
 proxy_agent = ProxyAgent()
 communication_service = AgentCommunicationService()
+conversation_service = ConversationService()
 
 @app.get("/healthz", status_code=status.HTTP_200_OK)
 async def health_check():
     return {"status": "ok"}
 
-@app.post("/api/conversation", status_code=status.HTTP_200_OK)
+@app.post("/conversation", status_code=status.HTTP_200_OK)
 async def conversation(request: ConversationRequest) -> ConversationResponse:
-    """智能對話 API - 由 ProxyAgent 處理並判斷是否需要轉發"""
     if not db or not publisher:
-        raise HTTPException(status_code=500, detail="GCP 客戶端尚未初始化，請檢查憑證。")
+        raise HTTPException(status_code=500, detail="GCP clients not initialized, please check credentials.")
 
     try:
-        # 生成任務 ID
-        task_id = str(uuid.uuid4())
+        session_id = request.session_id or str(uuid.uuid4())
         
-        # 創建對話訊息
-        user_message = ConversationMessage(sender="user", text=request.user_prompt)
+        session = await conversation_service.get_session(session_id)
+        if not session:
+            session = await conversation_service.create_session(
+                session_id=session_id,
+                user_id=request.user_id
+            )
         
-        logger.info(f"ProxyAgent 處理對話: {task_id}")
+        user_message = await conversation_service.add_message(
+            session_id=session_id,
+            sender=MessageSender.USER,
+            content=request.user_prompt
+        )
         
-        # 使用 ProxyAgent 處理對話
-        conversation_history = [msg.model_dump() for msg in request.conversation_history]
+        logger.info(f"Processing conversation in session: {session_id}")
+        
+        conversation_history = await conversation_service.get_conversation_history(
+            session_id=session_id,
+            limit=5,
+            format_for_ai=True
+        )
+        
         product_context = request.product_context.model_dump() if request.product_context else None
         
         input_data = {
@@ -63,85 +83,85 @@ async def conversation(request: ConversationRequest) -> ConversationResponse:
             "conversation_history": conversation_history,
             "product_context": product_context
         }
+
+        result = await proxy_agent.run(session_id, input_data)
         
-        # 執行 ProxyAgent 任務
-        result = await proxy_agent.run(task_id, input_data)
+        logger.info(f"ProxyAgent result: {result}")
         
         if result.get("status") == "COMPLETED":
-            ai_response = result.get("output", "抱歉，我無法處理您的請求。")
+            ai_response = result.get("output", "Sorry, I cannot process your request.")
             
-            # 檢查是否需要轉發給其他代理人
-            should_forward, target_agent, required_capabilities = proxy_agent.should_forward_task(request.user_prompt)
-            
-            if should_forward:
-                # 尋找合適的代理人
-                if not target_agent:
-                    suitable_agent = await communication_service.find_suitable_agent(
-                        request.user_prompt, required_capabilities
-                    )
-                    if suitable_agent:
-                        target_agent = suitable_agent["agent_id"]
-                
-                if target_agent:
-                    # 轉發任務
-                    forward_result = await communication_service.forward_task_to_agent(
-                        target_agent, {
-                            "task_id": task_id,
-                            "input_data": input_data
-                        }, "proxy-agent"
-                    )
-                    
-                    if forward_result.get("status") == "SUCCESS":
-                        ai_response = f"我已將您的請求轉發給專業的 {target_agent} 處理，請稍候片刻。"
-                        action = "FORWARDED"
-                        delegated_to = target_agent
-                    else:
-                        ai_response = f"轉發失敗，我將直接為您處理：{ai_response}"
-                        action = "DIRECT_REPLY"
-                        delegated_to = None
-                else:
-                    # 找不到合適的代理人，直接回覆
-                    action = "DIRECT_REPLY"
-                    delegated_to = None
-            else:
-                # 不需要轉發，直接回覆
-                action = "DIRECT_REPLY"
-                delegated_to = None
-            
-            # 創建 AI 回應訊息
-            ai_message = ConversationMessage(sender="ai", text=ai_response)
-            
-            # 儲存對話記錄
-            task_data = FirestoreTask(
-                task_id=task_id,
-                status="COMPLETED" if action == "DIRECT_REPLY" else "FORWARDED",
-                user_id=request.user_id,
-                initial_request={"user_prompt": request.user_prompt},
-                conversation_history=[user_message, ai_message],
-                product_context=product_context,
-                completed_at=datetime.now().timestamp() if action == "DIRECT_REPLY" else None
+            await conversation_service.add_message(
+                session_id=session_id,
+                sender=MessageSender.AI,
+                content=ai_response
             )
             
-            db.collection('tasks').document(task_id).set(task_data.model_dump())
+            logger.info(f"AI response added to session: {session_id}")
             
             return ConversationResponse(
-                task_id=task_id,
+                task_id=session_id,
                 agent_response=ai_response,
-                action=action,
-                delegated_to=delegated_to
+                action="DIRECT_REPLY",
+                delegated_to=None,
+                session_id=session_id
+            )
+            
+        elif result.get("status") == "TASK_CREATED":
+            task_id = result.get("task_id")
+            
+            if task_id:
+                await conversation_service.add_related_task(session_id, task_id)
+            
+            return ConversationResponse(
+                task_id=task_id or session_id,
+                agent_response="Your request is being processed. You will be notified when it's complete.",
+                action="TASK_DELEGATED",
+                delegated_to=result.get("delegated_to"),
+                session_id=session_id
             )
         
         else:
-            # 處理失敗
-            error_msg = result.get("error", "處理請求時發生未知錯誤")
-            logger.error(f"ProxyAgent 處理失敗: {error_msg}")
+            error_msg = result.get("error", "Unknown error occurred while processing request")
+            logger.error(f"ProxyAgent processing failed: {error_msg}")
             
-            return ConversationResponse(
-                task_id=task_id,
-                agent_response="抱歉，我現在無法處理您的請求，請稍後再試。",
-                action="ERROR"
+            await conversation_service.add_message(
+                session_id=session_id,
+                sender=MessageSender.SYSTEM,
+                content=f"Error: {error_msg}"
             )
             
+            raise HTTPException(status_code=500, detail=error_msg)
+            
     except Exception as e:
-        logger.error(f"對話處理失敗: {e}")
-        raise HTTPException(status_code=500, detail=f"對話處理失敗: {str(e)}")
+        error_msg = f"Conversation processing failed: {str(e)}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)
+
+
+@app.get("/conversation/{session_id}")
+async def get_conversation(session_id: str, limit: int = 20):
+    try:
+        session = await conversation_service.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Conversation session not found")
+        
+        history = await conversation_service.get_conversation_history(
+            session_id=session_id,
+            limit=limit
+        )
+        
+        return {
+            "session_id": session_id,
+            "status": session.status.value,
+            "messages": history,
+            "summary": session.summary.model_dump(),
+            "related_tasks": session.related_tasks
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_msg = f"Failed to get conversation: {str(e)}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)

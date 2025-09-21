@@ -4,91 +4,126 @@ import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
+
 from google.cloud import firestore
-from google.cloud import aiplatform
 import hashlib
 import time
 from datetime import datetime
-from ..shared_crew_lib.schemas.knowledge_base import KnowledgeBaseEntry, KnowledgeBaseStatus
-from ..shared_crew_lib.services.rag_service import RAGService
+
+from tenacity import retry, stop_after_attempt, wait_fixed
+
+from rag_service import RAGService
+from knowledge_base import KnowledgeBaseEntry, KnowledgeBaseStatus
 
 logger = logging.getLogger(__name__)
 
+
 class CrawlerService:
-    """網站爬取和索引服務 - 支援知識庫管理"""
-    
-    def __init__(self, db: firestore.Client, project_id: str, location: str = "us-central1"):
+    """Service for crawling websites and managing knowledge base indexing."""
+
+    def __init__(self, db: firestore.AsyncClient, project_id: str, location: str):
         self.db = db
         self.project_id = project_id
         self.location = location
         self.collection_name = "knowledge_base"
-        self.max_pages_per_site = 100  # 每個網站最多爬取頁面數
-        self.max_concurrent_requests = 5  # 最大並發請求數
-        
-    async def start_website_indexing(self, url: str) -> str:
-        """開始網站索引流程"""
-        try:
-            # 生成知識庫 ID
-            kb_id = self._generate_kb_id(url)
-            
-            # 創建知識庫項目
-            kb_entry = KnowledgeBaseEntry(
-                kb_id=kb_id,
-                url=url,
-                status=KnowledgeBaseStatus.QUEUED
-            )
-            
-            # 保存到 Firestore
-            self.db.collection(self.collection_name).document(kb_id).set(kb_entry.model_dump())
-            logger.info(f"創建知識庫項目: {kb_id} for {url}")
-            
-            # 異步開始爬取流程
-            asyncio.create_task(self._crawl_and_index_website(kb_id, url))
-            
-            return kb_id
-            
-        except Exception as e:
-            logger.error(f"開始網站索引失敗: {e}")
-            raise
-    
+        self.rag_service = RAGService(project_id=project_id, location=location, db=db)
+        self.max_pages_per_site = 50  # Limit page count for hackathon demo speed
+        self.max_concurrent_requests = 5
+
+    async def trigger_crawling_from_event(self, url: str) -> str:
+        """Triggers the crawling process from a Pub/Sub event and runs it synchronously within the function's lifecycle."""
+        kb_id = self._generate_kb_id(url)
+        kb_entry = KnowledgeBaseEntry(
+            kb_id=kb_id,
+            url=url,
+            status=KnowledgeBaseStatus.QUEUED
+        )
+        logger.info(f"Knowledge base entry created: {kb_id}  {kb_entry}")
+        await self.db.collection(self.collection_name).document(kb_id).set(kb_entry.model_dump())
+        logger.info(f"Knowledge base entry created: {kb_id} for {url}")
+
+        # In a Cloud Function, the task runs in the foreground.
+        await self._crawl_and_index_website(kb_id, url)
+
+        return kb_id
+
     async def _crawl_and_index_website(self, kb_id: str, base_url: str):
-        """爬取和索引網站的主要流程"""
+        """The main process for crawling and indexing a website."""
         try:
-            # 更新狀態為爬取中
             await self._update_kb_status(kb_id, KnowledgeBaseStatus.CRAWLING)
-            
-            # 爬取網站頁面
             pages_data = await self._crawl_website(base_url)
-            
-            # 更新頁面統計
+
+            if not pages_data:
+                raise ValueError("No valid content was crawled. Please check the URL or website structure.")
+
             await self._update_kb_pages(kb_id, len(pages_data), len(pages_data))
-            
-            # 更新狀態為索引中
             await self._update_kb_status(kb_id, KnowledgeBaseStatus.INDEXING)
-            
-            # 建立向量索引
+
+            # Key integration point with Vertex AI
             await self._create_vector_index(kb_id, pages_data)
-            
-            # 更新狀態為活躍
+
             await self._update_kb_status(kb_id, KnowledgeBaseStatus.ACTIVE)
-            
-            logger.info(f"網站索引完成: {kb_id}, 共處理 {len(pages_data)} 個頁面")
-            
+            logger.info(f"Website indexing completed for {kb_id}, processed {len(pages_data)} pages")
+
         except Exception as e:
-            logger.error(f"網站索引失敗: {e}")
-            await self._update_kb_status(
-                kb_id, 
-                KnowledgeBaseStatus.FAILED, 
-                error_message=str(e)
-            )
-    
+            logger.error(f"Website indexing failed for {kb_id}: {e}", exc_info=True)
+            await self._update_kb_status(kb_id, KnowledgeBaseStatus.FAILED, error_message=str(e))
+
+    async def _create_vector_index(self, kb_id: str, pages_data: List[Dict[str, Any]]):
+        """Creates a vector index for the page content."""
+        # 1. Prepare text chunks with metadata
+        text_chunks_with_metadata = []
+        all_chunks_content = []
+        for page in pages_data:
+            chunks = self._split_text_into_chunks(page['content'])
+            for i, chunk_content in enumerate(chunks):
+                chunk_id = f"{hashlib.md5(page['url'].encode()).hexdigest()}_{i}"
+                text_chunks_with_metadata.append({
+                    'id': chunk_id,
+                    'content': chunk_content,
+                    'source_url': page['url'],
+                    'title': page['title'],
+                    'kb_id': kb_id
+                })
+                all_chunks_content.append(chunk_content)
+
+        if not all_chunks_content:
+            logger.warning(f"No indexable text chunks found for knowledge base {kb_id}.")
+            return
+
+        # 2. Batch generate embeddings
+        embeddings = await self.rag_service.get_embeddings(all_chunks_content)
+
+        # 3. Combine datapoints for upserting
+        datapoints_to_upsert = []
+        for i, chunk_meta in enumerate(text_chunks_with_metadata):
+            datapoints_to_upsert.append({
+                "datapoint_id": chunk_meta['id'],
+                "feature_vector": embeddings[i]
+            })
+
+        # 4. Setup Vector Search Index and Endpoint via RAGService
+        # In a real application, Index/Endpoint creation might be a separate admin task.
+        index_object, endpoint_name, deployed_id = await self.rag_service.setup_infrastructure_for_kb(kb_id)
+
+        # 5. Upsert vectors to Vector Search
+        await self.rag_service.upsert_to_vector_search(index_object, datapoints_to_upsert)
+
+        # 6. Store metadata in Firestore
+        batch = self.db.batch()
+        chunks_collection = self.db.collection(self.collection_name).document(kb_id).collection("chunks")
+        for chunk_meta in text_chunks_with_metadata:
+            doc_ref = chunks_collection.document(chunk_meta['id'])
+            batch.set(doc_ref, chunk_meta)
+        await batch.commit()
+
     async def _crawl_website(self, base_url: str) -> List[Dict[str, Any]]:
-        """爬取網站所有頁面"""
+        """Crawls all pages of a website."""
         pages_data = []
         visited_urls = set()
         urls_to_visit = [base_url]
         
-        # 解析基礎域名
+        # Parse the base domain
         base_domain = urlparse(base_url).netloc
         
         async with aiohttp.ClientSession(
@@ -99,11 +134,11 @@ class CrawlerService:
             semaphore = asyncio.Semaphore(self.max_concurrent_requests)
             
             while urls_to_visit and len(pages_data) < self.max_pages_per_site:
-                # 批次處理 URL
+                # Process URLs in batches
                 batch_urls = urls_to_visit[:self.max_concurrent_requests]
                 urls_to_visit = urls_to_visit[self.max_concurrent_requests:]
                 
-                # 並發爬取
+                # Crawl concurrently
                 tasks = [
                     self._crawl_single_page(session, semaphore, url, base_domain)
                     for url in batch_urls
@@ -119,28 +154,29 @@ class CrawlerService:
                     visited_urls.add(url)
                     
                     if isinstance(result, Exception):
-                        logger.warning(f"爬取頁面失敗 {url}: {result}")
+                        logger.warning(f"Failed to crawl page {url}: {result}")
                         continue
                     
                     if result:
                         page_data, new_urls = result
                         pages_data.append(page_data)
                         
-                        # 添加新發現的 URL
+                        # Add newly discovered URLs
                         for new_url in new_urls:
                             if (new_url not in visited_urls and 
                                 new_url not in urls_to_visit and
                                 len(pages_data) + len(urls_to_visit) < self.max_pages_per_site):
                                 urls_to_visit.append(new_url)
                 
-                # 避免過於頻繁的請求
+                # Avoid overly frequent requests
                 await asyncio.sleep(1)
         
         return pages_data
-    
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
     async def _crawl_single_page(self, session: aiohttp.ClientSession, semaphore: asyncio.Semaphore, 
                                 url: str, base_domain: str) -> Optional[tuple]:
-        """爬取單個頁面"""
+        """Crawls a single page."""
         async with semaphore:
             try:
                 async with session.get(url) as response:
@@ -153,26 +189,26 @@ class CrawlerService:
                     
                     html_content = await response.text()
                     
-                # 解析 HTML
+                # Parse HTML
                 soup = BeautifulSoup(html_content, 'html.parser')
                 
-                # 提取文本內容
+                # Extract text content
                 text_content = self._extract_text_content(soup)
                 
                 if not text_content.strip():
                     return None
                 
-                # 提取頁面元數據
+                # Extract page metadata
                 title = soup.find('title')
                 title_text = title.get_text().strip() if title else ""
                 
-                # 提取所有鏈接
+                # Extract all links
                 links = []
                 for link in soup.find_all('a', href=True):
                     href = link['href']
                     absolute_url = urljoin(url, href)
                     
-                    # 只保留同域名的鏈接
+                    # Only keep links within the same domain
                     if urlparse(absolute_url).netloc == base_domain:
                         links.append(absolute_url)
                 
@@ -188,16 +224,16 @@ class CrawlerService:
                 return page_data, links
                 
             except Exception as e:
-                logger.error(f"爬取頁面錯誤 {url}: {e}")
+                logger.error(f"Error crawling page {url}: {e}")
                 return None
     
     def _extract_text_content(self, soup: BeautifulSoup) -> str:
-        """從 HTML 中提取純文本內容"""
-        # 移除腳本和樣式標籤
+        """Extracts plain text content from HTML."""
+        # Remove script and style tags
         for script in soup(["script", "style", "nav", "footer", "header"]):
             script.decompose()
         
-        # 提取主要內容區域
+        # Extract main content area
         main_content = soup.find('main') or soup.find('article') or soup.find('div', class_='content') or soup.body
         
         if main_content:
@@ -205,57 +241,15 @@ class CrawlerService:
         else:
             text = soup.get_text()
         
-        # 清理文本
+        # Clean up text
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         text = ' '.join(chunk for chunk in chunks if chunk)
         
         return text
-    
-    async def _create_vector_index(self, kb_id: str, pages_data: List[Dict[str, Any]]):
-        """為頁面內容創建向量索引"""
-        try:
-            # 將頁面內容切分為較小的塊
-            text_chunks = []
-            
-            for page in pages_data:
-                chunks = self._split_text_into_chunks(
-                    page['content'], 
-                    max_chunk_size=1000,
-                    overlap=100
-                )
-                
-                for i, chunk in enumerate(chunks):
-                    text_chunks.append({
-                        'id': f"{kb_id}_{page['url']}_{i}",
-                        'content': chunk,
-                        'source_url': page['url'],
-                        'title': page['title'],
-                        'kb_id': kb_id,
-                        'chunk_index': i
-                    })
-            
-            # 生成嵌入向量並存儲
-            # 注意：這裡需要實際的向量數據庫實現
-            # 目前先將文本塊存儲到 Firestore 作為臨時方案
-            
-            batch = self.db.batch()
-            chunks_collection = self.db.collection(f'kb_chunks_{kb_id}')
-            
-            for chunk_data in text_chunks:
-                doc_ref = chunks_collection.document(chunk_data['id'])
-                batch.set(doc_ref, chunk_data)
-            
-            batch.commit()
-            
-            logger.info(f"創建向量索引完成: {kb_id}, 共 {len(text_chunks)} 個文本塊")
-            
-        except Exception as e:
-            logger.error(f"創建向量索引失敗: {e}")
-            raise
-    
+
     def _split_text_into_chunks(self, text: str, max_chunk_size: int = 1000, overlap: int = 100) -> List[str]:
-        """將長文本切分為較小的塊"""
+        """Splits long text into smaller chunks."""
         if len(text) <= max_chunk_size:
             return [text]
         
@@ -269,29 +263,29 @@ class CrawlerService:
                 chunks.append(text[start:])
                 break
             
-            # 嘗試在句號或換行符處切分
+            # Try to split at a sentence-ending punctuation or newline
             chunk_text = text[start:end]
             last_period = chunk_text.rfind('.')
             last_newline = chunk_text.rfind('\n')
             
             split_point = max(last_period, last_newline)
             
-            if split_point > start + max_chunk_size // 2:  # 確保切分點不會太早
+            if split_point > start + max_chunk_size // 2:  # Ensure the split point is not too early
                 end = start + split_point + 1
             
             chunks.append(text[start:end])
-            start = end - overlap  # 添加重疊
+            start = end - overlap  # Add overlap
         
         return chunks
     
     def _generate_kb_id(self, url: str) -> str:
-        """生成知識庫 ID"""
+        """Generates a unique knowledge base ID."""
         domain = urlparse(url).netloc
         timestamp = str(int(time.time()))
         return f"kb_{domain.replace('.', '_')}_{timestamp}"
     
     async def _update_kb_status(self, kb_id: str, status: KnowledgeBaseStatus, error_message: Optional[str] = None):
-        """更新知識庫狀態"""
+        """Updates the status of the knowledge base entry."""
         try:
             update_data = {
                 'status': status.value,
@@ -301,57 +295,57 @@ class CrawlerService:
             if error_message:
                 update_data['error_message'] = error_message
             
-            self.db.collection(self.collection_name).document(kb_id).update(update_data)
+            await self.db.collection(self.collection_name).document(kb_id).update(update_data)
             
         except Exception as e:
-            logger.error(f"更新知識庫狀態失敗: {e}")
+            logger.error(f"Failed to update knowledge base status: {e}")
     
     async def _update_kb_pages(self, kb_id: str, indexed_pages: int, total_pages: int):
-        """更新知識庫頁面統計"""
+        """Updates the page counts for the knowledge base entry."""
         try:
-            self.db.collection(self.collection_name).document(kb_id).update({
+            await self.db.collection(self.collection_name).document(kb_id).update({
                 'indexed_pages': indexed_pages,
                 'total_pages': total_pages,
                 'updated_at': datetime.now().timestamp()
             })
             
         except Exception as e:
-            logger.error(f"更新頁面統計失敗: {e}")
+            logger.error(f"Failed to update page statistics: {e}")
     
     async def get_knowledge_bases(self) -> List[KnowledgeBaseEntry]:
-        """獲取所有知識庫"""
+        """Retrieves all knowledge bases."""
         try:
-            docs = self.db.collection(self.collection_name).stream()
+            docs = await self.db.collection(self.collection_name).stream()
             knowledge_bases = []
             
-            for doc in docs:
+            async for doc in docs:
                 kb_data = doc.to_dict()
                 knowledge_bases.append(KnowledgeBaseEntry(**kb_data))
             
             return knowledge_bases
             
         except Exception as e:
-            logger.error(f"獲取知識庫列表失敗: {e}")
+            logger.error(f"Failed to retrieve knowledge base list: {e}")
             return []
     
     async def delete_knowledge_base(self, kb_id: str) -> bool:
-        """刪除知識庫"""
+        """Deletes a knowledge base."""
         try:
-            # 刪除主記錄
-            self.db.collection(self.collection_name).document(kb_id).delete()
+            # Delete the main record
+            await self.db.collection(self.collection_name).document(kb_id).delete()
             
-            # 刪除相關的文本塊
-            chunks_collection = self.db.collection(f'kb_chunks_{kb_id}')
+            # Delete associated text chunks
+            chunks_collection = self.db.collection(self.collection_name).document(kb_id).collection("chunks")
             docs = chunks_collection.stream()
             
             batch = self.db.batch()
-            for doc in docs:
+            async for doc in docs:
                 batch.delete(doc.reference)
-            batch.commit()
+            await batch.commit()
             
-            logger.info(f"刪除知識庫: {kb_id}")
+            logger.info(f"Deleted knowledge base: {kb_id}")
             return True
             
         except Exception as e:
-            logger.error(f"刪除知識庫失敗: {e}")
+            logger.error(f"Failed to delete knowledge base: {e}")
             return False

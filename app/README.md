@@ -8,16 +8,25 @@ The `app/` directory contains the core backend system for the GKE-10 Hackathon A
 app/
 ├── workers/                    # Agent Workers & API Endpoints
 │   ├── orchestrator.py         # Main FastAPI server + Orchestrator Agent
-│   ├── tech_analyst_worker.py  # Technical Analysis Agent
-│   ├── architect_worker.py     # System Architecture Agent
-│   ├── stylist_worker.py       # UI/UX Styling Agent
+│   ├── proxy.py                # Proxy Agent for conversation handling
+│   ├── omni_agent_worker.py    # Multi-purpose Omni Agent
 │   └── __init__.py
 ├── shared_crew_lib/            # Shared Libraries & Core Components
 │   ├── agents/                 # CrewAI Agent Implementations
-│   ├── base/                   # Enhanced Base Classes
+│   │   ├── base.py             # Base agent class
+│   │   ├── orchestrator_agent.py # Orchestrator agent implementation
+│   │   ├── proxy_agent.py      # Proxy agent for conversations
+│   │   └── omni_agent.py       # Multi-purpose agent
 │   ├── clients/                # GCP Service Clients
+│   │   └── gcp_clients.py      # Firestore, Pub/Sub clients
 │   ├── schemas/                # Data Models & Schemas
+│   │   ├── conversation.py     # Conversation data models
+│   │   ├── agent_registry.py   # Agent registry schemas
+│   │   └── knowledge_base.py   # Knowledge base schemas
 │   └── services/               # Core Business Logic Services
+│       ├── conversation_service.py # Conversation management
+│       ├── agent_registry_service.py # Agent lifecycle management
+│       └── rag_service.py      # RAG implementation
 ├── services/                   # Application Services
 │   └── crawler_service.py      # Website Crawling for RAG
 └── scripts/                    # Deployment & Provisioning Scripts
@@ -29,22 +38,41 @@ app/
 ### Workers (Agent Microservices)
 
 #### Orchestrator (`orchestrator.py`)
-- **Primary Role**: Central coordination and API gateway
+- **Primary Role**: Central coordination and management API
 - **Responsibilities**:
-  - FastAPI server hosting all REST endpoints
-  - Intelligent conversation management
-  - Task routing to specialized agents
-  - Real-time WebSocket communication
+  - FastAPI server hosting management REST endpoints
+  - Agent lifecycle management (create, update, delete agents)
+  - Knowledge base management (indexing, search)
+  - Task coordination and routing
 - **Key Features**:
-  - Multi-turn conversation handling
-  - Intent analysis and agent selection
-  - Dynamic agent discovery and creation
+  - Agent registry management
+  - Knowledge base CRUD operations
+  - System initialization and health checks
   - Comprehensive logging and monitoring
 
-#### Specialized Agents
-- **TechAnalystAgent**: Technical analysis, code review, architecture recommendations
-- **ArchitectAgent**: System design, scalability planning, infrastructure advice
-- **StylistAgent**: UI/UX design, fashion styling, visual recommendations
+#### Proxy Agent (`proxy.py`)
+- **Primary Role**: Customer conversation handling
+- **Responsibilities**:
+  - FastAPI server for conversation API
+  - Customer interaction processing
+  - Task delegation to specialist agents
+  - Session management and history
+- **Key Features**:
+  - Multi-turn conversation handling
+  - Intent analysis and response generation
+  - Firebase integration for real-time updates
+  - Direct replies and task delegation
+
+#### Omni Agent (`omni_agent_worker.py`)
+- **Primary Role**: Multi-purpose task processing
+- **Responsibilities**:
+  - Flexible task execution
+  - Pub/Sub message processing
+  - Dynamic capability handling
+- **Key Features**:
+  - Adaptable to various task types
+  - Event-driven processing
+  - Scalable worker architecture
 
 ### Shared Libraries (`shared_crew_lib/`)
 
@@ -108,19 +136,29 @@ app/
 
 ## 📋 API Endpoints
 
-### Core Conversation API
+### Conversation API (Proxy Agent - Port 8001)
 ```
 POST /api/conversation
-- Main endpoint for agent interactions
+- Main endpoint for customer interactions
 - Supports multi-turn conversations
-- Automatic agent routing based on intent
+- Session management and history
+- Direct replies and task delegation
 
-GET /api/conversation/{conversation_id}
+GET /api/conversation/{session_id}
 - Retrieve conversation history
 - Real-time status updates
+- Session summary and related tasks
+
+POST /api/task
+- Create asynchronous tasks
+- Task delegation to specialist agents
+
+GET /api/task/{task_id}
+- Get task status and results
+- Real-time progress monitoring
 ```
 
-### Agent Management
+### Management API (Orchestrator - Port 8000)
 ```
 GET /api/agents
 - List all registered agents
@@ -136,9 +174,13 @@ PATCH /api/agents/{agent_id}
 
 DELETE /api/agents/{agent_id}
 - Remove agent and cleanup resources
+
+POST /api/start-task
+- Start orchestrated tasks
+- Legacy task initiation endpoint
 ```
 
-### Knowledge Base Management
+### Knowledge Base Management (Orchestrator - Port 8000)
 ```
 GET /api/knowledge-base
 - List all knowledge entries
@@ -148,11 +190,11 @@ POST /api/knowledge-base/index
 - Add new website to knowledge base
 - Trigger crawling and indexing
 
-POST /api/knowledge-base/reindex/{entry_id}
+POST /api/knowledge-base/reindex/{kb_id}
 - Re-crawl and update existing entry
 - Refresh vector embeddings
 
-DELETE /api/knowledge-base/{entry_id}
+DELETE /api/knowledge-base/{kb_id}
 - Remove knowledge entry
 - Cleanup associated vectors
 ```
@@ -178,22 +220,16 @@ GET /api/metrics
 ### Environment Variables
 ```bash
 # Google Cloud Configuration
-GOOGLE_CLOUD_PROJECT=your-project-id
-GOOGLE_APPLICATION_CREDENTIALS=./google-credentials.json
-
-# Firestore Database
-FIRESTORE_DATABASE_ID=your-database-id
-
-# Vertex AI Configuration
-VERTEX_AI_LOCATION=us-central1
-VERTEX_AI_MODEL=gemini-1.5-pro
+GCP_PROJECT_ID=gke-10-hackathon-471902
+GCP_FIRESTORE_NAME=gke-10-hackathon
+GOOGLE_API_KEY=your-gemini-api-key
 
 # Pub/Sub Configuration
-PUBSUB_TOPIC_PREFIX=agent-tasks
+PROXY_AGENT_SUBSCRIPTION_ID=proxy-agent-sub
+AGENT_REGISTRY_SUBSCRIPTION_ID=agent-registry-updates-sub
 
 # API Configuration
-API_HOST=0.0.0.0
-API_PORT=8000
+PYTHONPATH=/workspace
 LOG_LEVEL=INFO
 ```
 
@@ -228,13 +264,14 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with your GCP configuration
 
-# Run the orchestrator (main API server)
+# Run the orchestrator (management API server)
 uvicorn app.workers.orchestrator:app --reload --host 0.0.0.0 --port 8000
 
-# Or run individual agents
-python -m app.workers.tech_analyst_worker
-python -m app.workers.architect_worker
-python -m app.workers.stylist_worker
+# Run the proxy agent (conversation API server)
+uvicorn app.workers.proxy:app --reload --host 0.0.0.0 --port 8001
+
+# Run the omni agent worker
+python -m app.workers.omni_agent_worker
 ```
 
 ### Docker Development
@@ -254,10 +291,13 @@ pytest tests/
 # Run integration tests
 pytest tests/integration/
 
-# Test API endpoints
-curl -X POST http://localhost:8000/api/conversation \
+# Test conversation API (proxy agent)
+curl -X POST http://localhost:8001/api/conversation \
   -H "Content-Type: application/json" \
-  -d '{"user_prompt": "Help me design a modern e-commerce website"}'
+  -d '{"user_prompt": "Tell me about this product", "user_id": "test-user"}'
+
+# Test management API (orchestrator)
+curl -X GET http://localhost:8000/api/agents
 ```
 
 ## 📊 Monitoring & Observability

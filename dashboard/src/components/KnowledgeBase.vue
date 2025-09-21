@@ -98,14 +98,6 @@
               <td class="time-cell">{{ formatTime(entry.updated_at) }}</td>
               <td class="actions-cell">
                 <button 
-                  @click="reindexEntry(entry)" 
-                  :disabled="entry.status === 'CRAWLING' || entry.status === 'INDEXING'"
-                  class="action-btn reindex-btn"
-                  title="重新索引"
-                >
-                  <i class="fas fa-redo"></i>
-                </button>
-                <button 
                   @click="viewEntryDetails(entry)" 
                   class="action-btn view-btn"
                   title="查看詳情"
@@ -348,24 +340,6 @@ const submitNewWebsite = async () => {
   }
 }
 
-const reindexEntry = async (entry: KnowledgeEntry) => {
-  if (confirm(`確定要重新索引 ${entry.url} 嗎？`)) {
-    try {
-      const response = await fetch(`/api/knowledge-base/reindex/${entry.kb_id}`, {
-        method: 'POST'
-      })
-
-      if (response.ok) {
-        emit('refresh')
-      } else {
-        const error = await response.json()
-        alert(`重新索引失敗: ${error.detail || '未知錯誤'}`)
-      }
-    } catch (error) {
-      alert(`重新索引失敗: ${error}`)
-    }
-  }
-}
 
 const deleteEntry = async (entry: KnowledgeEntry) => {
   if (confirm(`確定要刪除 ${entry.url} 的索引嗎？此操作無法復原。`)) {

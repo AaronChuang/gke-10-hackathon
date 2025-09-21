@@ -11,36 +11,37 @@ class KnowledgeBaseStatus(str, Enum):
     FAILED = "FAILED"
 
 class KnowledgeBaseEntry(BaseModel):
-    """知識庫項目"""
-    kb_id: str = Field(..., description="知識庫唯一識別碼")
-    url: str = Field(..., description="網站 URL")
+    """Represents a single entry in the knowledge base."""
+    kb_id: str = Field(..., description="Unique identifier for the knowledge base.")
+    url: str = Field(..., description="The URL of the website.")
     status: KnowledgeBaseStatus = Field(default=KnowledgeBaseStatus.QUEUED)
     created_at: float = Field(default_factory=lambda: datetime.now().timestamp())
     updated_at: float = Field(default_factory=lambda: datetime.now().timestamp())
-    indexed_pages: int = Field(default=0, description="已索引頁面數")
-    total_pages: int = Field(default=0, description="總頁面數")
-    error_message: Optional[str] = Field(None, description="錯誤訊息")
+    indexed_pages: int = Field(default=0, description="Number of pages indexed.")
+    total_pages: int = Field(default=0, description="Total number of pages found.")
+    error_message: Optional[str] = Field(None, description="Error message if indexing failed.")
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 class IndexWebsiteRequest(BaseModel):
-    """索引網站請求"""
-    url: str = Field(..., description="要索引的網站 URL")
+    """Request to index a website."""
+    url: str = Field(..., description="The URL of the website to index.")
 
 class RAGQueryRequest(BaseModel):
-    """RAG 查詢請求"""
-    query: str = Field(..., description="查詢文本")
-    top_k: int = Field(default=5, description="返回最相關的 K 個結果")
-    similarity_threshold: float = Field(default=0.7, description="相似度閾值")
+    """Request for a RAG query."""
+    query: str = Field(..., description="The query text.")
+    top_k: int = Field(default=5, description="The number of top K results to return.")
+    similarity_threshold: float = Field(default=0.7, description="The similarity threshold.")
 
 class RAGQueryResult(BaseModel):
-    """RAG 查詢結果"""
-    content: str = Field(..., description="相關內容片段")
-    source_url: str = Field(..., description="來源 URL")
-    similarity_score: float = Field(..., description="相似度分數")
+    """A single result from a RAG query."""
+    content: str = Field(..., description="The relevant content snippet.")
+    source_url: str = Field(..., description="The source URL of the content.")
+    similarity_score: float = Field(..., description="The similarity score.")
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 class RAGQueryResponse(BaseModel):
-    """RAG 查詢回應"""
+    """The response from a RAG query."""
     results: List[RAGQueryResult] = Field(default_factory=list)
     total_results: int = Field(default=0)
     query_time_ms: float = Field(default=0.0)
+ㄋ

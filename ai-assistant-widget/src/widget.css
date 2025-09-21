@@ -1,6 +1,6 @@
-/* AI Stylist Widget - Shadow DOM 專用樣式表 */
+/* AI Assistant Widget - Shadow DOM Specific Stylesheet */
 
-/* 重設所有樣式，確保 Shadow DOM 隔離 */
+/* Reset all styles to ensure Shadow DOM isolation */
 :host {
     all: initial;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -15,7 +15,7 @@
     padding: 0;
 }
 
-/* --- 根容器 --- */
+/* --- Root Container --- */
 .ai-widget-container {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     font-size: 16px;
@@ -25,7 +25,7 @@
     height: 100%;
 }
 
-/* --- 浮動按鈕 --- */
+/* --- Floating Button --- */
 .ai-widget-fab {
     position: fixed;
     bottom: 20px;
@@ -69,7 +69,7 @@
     transition: transform 0.3s ease-in-out;
 }
 
-/* --- 響應式設計 --- */
+/* --- Responsive Design --- */
 @media (max-width: 480px) {
     .ai-widget-window {
         width: calc(100vw - 20px);
@@ -119,7 +119,7 @@
     }
 }
 
-/* --- 對話視窗 --- */
+/* --- Chat Window --- */
 .ai-widget-window {
     position: fixed;
     bottom: 95px;
@@ -127,8 +127,8 @@
     width: 380px;
     height: 65vh;
     max-height: 600px;
-    background-color: #1F2937; /* 深灰藍 */
-    color: #E5E7EB; /* 淺灰色文字 */
+    background-color: #1F2937; /* Dark gray-blue */
+    color: #E5E7EB; /* Light gray text */
     border-radius: 16px;
     box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
     display: flex;
@@ -144,7 +144,7 @@
     opacity: 0;
 }
 
-/* --- 視窗標頭 --- */
+/* --- Window Header --- */
 .ai-widget-header {
     background-color: #111827;
     padding: 16px;
@@ -202,7 +202,7 @@
     color: white;
 }
 
-/* --- 對話訊息區域 --- */
+/* --- Chat Messages Area --- */
 .chat-messages {
     flex-grow: 1;
     padding: 16px;
@@ -212,7 +212,7 @@
     gap: 12px;
 }
 
-/* --- 訊息氣泡 --- */
+/* --- Message Bubbles --- */
 .message-bubble {
     display: flex;
     flex-direction: column;
@@ -276,7 +276,7 @@
     text-align: left;
 }
 
-/* --- 打字指示器 --- */
+/* --- Typing Indicator --- */
 .typing-indicator {
     display: flex;
     gap: 4px;
@@ -310,7 +310,7 @@
     }
 }
 
-/* --- 快捷按鈕區域 --- */
+/* --- Quick Actions Area --- */
 .quick-actions {
     padding: 12px 16px;
     border-top: 1px solid #374151;
@@ -341,7 +341,7 @@
     cursor: not-allowed;
 }
 
-/* --- 輸入框區域 --- */
+/* --- Input Area --- */
 .chat-input-container {
     padding: 16px;
     border-top: 1px solid #374151;
@@ -406,7 +406,7 @@
     height: 18px;
 }
 
-/* --- Markdown 樣式 --- */
+/* --- Markdown Styles --- */
 .message-content h1, 
 .message-content h2, 
 .message-content h3 {
@@ -454,7 +454,7 @@
     margin: 16px 0;
 }
 
-/* --- 動畫效果 --- */
+/* --- Animation Effects --- */
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -470,7 +470,7 @@
     animation: fadeInUp 0.3s ease-out;
 }
 
-/* --- 滾動條樣式 --- */
+/* --- Scrollbar Styles --- */
 .chat-messages::-webkit-scrollbar {
     width: 6px;
 }

@@ -1,15 +1,16 @@
-# AI Stylist Widget
+# AI Assistant Widget
 
-An injectable JavaScript widget built with Preact that provides AI-powered fashion and styling advice for e-commerce websites. This widget integrates seamlessly with the Online Boutique sample application for the GKE-10 Hackathon, demonstrating non-invasive AI enhancement.
+An injectable JavaScript widget built with Preact that provides AI-powered customer service and product assistance for e-commerce websites. This widget integrates seamlessly with the Online Boutique sample application for the GKE-10 Hackathon, demonstrating non-invasive AI enhancement.
 
 ## 🌟 Key Features
 
 - **Non-Invasive Integration**: Single `<script>` tag injection into any e-commerce site
-- **AI-Powered Styling**: Intelligent fashion recommendations using Google's Gemini models
-- **Real-Time Chat Interface**: Interactive conversation with AI stylist agent
+- **AI-Powered Assistance**: Intelligent product recommendations and customer support using Google's Gemini models
+- **Real-Time Chat Interface**: Interactive conversation with AI assistant agent
 - **Product Context Awareness**: Automatically detects and analyzes current product page
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
 - **Zero Dependencies**: Self-contained widget with no external requirements
+- **GKE Integration**: Uses Google Kubernetes Engine ingress for scalable backend services
 
 ## 🏗️ Architecture Overview
 
@@ -58,7 +59,7 @@ stylist-widget/
 
 ### Prerequisites
 - Node.js 18+ with pnpm installed
-- Access to the backend API (orchestrator service)
+- Access to the GKE backend services (proxy-agent and orchestrator)
 - Modern web browser for testing
 
 ### Install Dependencies
@@ -99,7 +100,7 @@ Add this single script tag to any e-commerce website:
 ```html
 <script 
   async 
-  src="https://storage.googleapis.com/gke-10-hackathon-assets/stylist-widget.js">
+  src="https://storage.googleapis.com/gke-10-hackathon-assets/ai-assistant-widget.js">
 </script>
 ```
 
@@ -110,8 +111,8 @@ The widget can be customized by setting global configuration before loading:
 
 ```html
 <script>
-  window.StylistWidgetConfig = {
-    apiUrl: 'https://your-custom-api.com',  // Default: built-in API
+  window.AIAssistantWidgetConfig = {
+    apiUrl: 'http://34.160.253.241',        // GKE ingress endpoint
     theme: 'light',                         // 'light' | 'dark' | 'auto'
     position: 'bottom-right',               // 'bottom-right' | 'bottom-left'
     autoOpen: false,                        // Auto-open chat on load
@@ -120,7 +121,7 @@ The widget can be customized by setting global configuration before loading:
 </script>
 <script 
   async 
-  src="https://storage.googleapis.com/gke-10-hackathon-assets/stylist-widget.js">
+  src="https://storage.googleapis.com/gke-10-hackathon-assets/ai-assistant-widget.js">
 </script>
 ```
 
@@ -129,7 +130,7 @@ For custom product context and enhanced features:
 
 ```javascript
 // Set custom product information
-window.StylistWidgetConfig = {
+window.AIAssistantWidgetConfig = {
   productContext: {
     name: 'Premium Cotton T-Shirt',
     price: '$29.99',
@@ -144,7 +145,7 @@ window.StylistWidgetConfig = {
 // Load the widget
 <script 
   async 
-  src="https://storage.googleapis.com/gke-10-hackathon-assets/stylist-widget.js">
+  src="https://storage.googleapis.com/gke-10-hackathon-assets/ai-assistant-widget.js">
 </script>
 ```
 

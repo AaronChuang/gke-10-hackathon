@@ -19,6 +19,7 @@ spec:
       containers:
         - name: omni-agent-container
           image: asia-east1-docker.pkg.dev/gke-10-hackathon-471902/ai-agents-repo/ai-agent-base:latest
+          imagePullPolicy: Always
           command: ["python", "/workspace/app/workers/omni_agent_worker.py"]
           resources:
             requests:

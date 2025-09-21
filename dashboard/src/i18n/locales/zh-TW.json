@@ -1,0 +1,162 @@
+{
+  "app": {
+    "title": "Online Boutique 公司總部",
+    "subtitle": "AI 驅動的電商企業管理中心"
+  },
+  "navigation": {
+    "strategy": "公司戰略",
+    "agents": "人事部",
+    "knowledge": "知識庫",
+    "operations": "營運部"
+  },
+  "strategy": {
+    "title": "商業顧問 AI - 為您的電商業務提供戰略建議",
+    "subtitle": "向我們的專業商業顧問 Agent 諮詢市場趨勢、組織發展和能力擴展建議",
+    "welcome": {
+      "title": "歡迎使用商業顧問服務",
+      "description": "我是您的專屬商業顧問 AI，可以為您提供以下建議：",
+      "marketTrends": {
+        "title": "市場趨勢分析",
+        "description": "根據最新的時尚趨勢，建議您引進哪些類型的產品？"
+      },
+      "organizationalDevelopment": {
+        "title": "組織發展建議",
+        "description": "為了提升客戶滿意度，建議公司增加什麼樣的 AI 部門？"
+      },
+      "capabilityExpansion": {
+        "title": "能力擴展建議",
+        "description": "為了讓客服部門更有效率，建議增加什麼樣的工具？"
+      }
+    },
+    "chat": {
+      "placeholder": "請輸入您的商業問題或需求...",
+      "send": "發送",
+      "hint": "按 Enter 發送，Shift + Enter 換行",
+      "you": "您",
+      "consultant": "商業顧問 AI",
+      "typing": "正在輸入..."
+    }
+  },
+  "agents": {
+    "title": "人事部 - Agent 管理",
+    "subtitle": "創建、編輯、啟用/停用公司的專業部門",
+    "createButton": "創建新代理人",
+    "stats": {
+      "total": "總代理人數",
+      "active": "活躍代理人",
+      "creating": "創建中",
+      "failed": "失敗"
+    },
+    "table": {
+      "title": "代理人列表",
+      "refresh": "刷新",
+      "allStatus": "所有狀態",
+      "name": "名稱",
+      "description": "描述",
+      "status": "狀態",
+      "capabilities": "能力",
+      "topic": "PubSub 主題",
+      "created": "創建時間",
+      "actions": "操作",
+      "edit": "編輯",
+      "delete": "刪除"
+    },
+    "status": {
+      "active": "活躍",
+      "inactive": "非活躍",
+      "creating": "創建中",
+      "failed": "失敗"
+    },
+    "modal": {
+      "create": "創建代理人",
+      "edit": "編輯代理人",
+      "close": "關閉",
+      "save": "儲存",
+      "saving": "儲存中...",
+      "cancel": "取消",
+      "name": "代理人名稱",
+      "namePlaceholder": "例如：時尚造型師代理人",
+      "description": "描述",
+      "descriptionPlaceholder": "描述代理人的角色和能力...",
+      "model": "AI 模型",
+      "tools": "可用工具",
+      "enable": "啟用此代理人"
+    }
+  },
+  "operations": {
+    "title": "營運中心 - 任務與對話管理",
+    "subtitle": "監控所有工單流轉和客戶對話歷史，追蹤成本和執行日誌",
+    "tabs": {
+      "tasks": "任務管理",
+      "conversations": "對話歷史"
+    },
+    "stats": {
+      "total": "總任務數",
+      "pending": "待處理",
+      "completed": "已完成",
+      "tokens": "總 Token 消耗"
+    },
+    "tasks": {
+      "table": {
+        "taskId": "任務 ID",
+        "status": "狀態",
+        "creator": "創建者",
+        "currentDept": "當前處理部門",
+        "tokens": "Token 消耗",
+        "created": "創建時間",
+        "actions": "操作",
+        "view": "查看"
+      },
+      "status": {
+        "pending": "待處理",
+        "running": "執行中",
+        "completed": "已完成",
+        "failed": "失敗"
+      },
+      "modal": {
+        "title": "任務詳情",
+        "close": "關閉",
+        "status": "狀態:",
+        "created": "創建時間:",
+        "tokens": "Token 消耗:",
+        "executionLog": "執行日誌"
+      }
+    },
+    "conversations": {
+      "messageCount": "則訊息",
+      "tokens": "tokens",
+      "lastMessage": "最後訊息:",
+      "viewDetails": "查看詳情",
+      "anonymous": "匿名用戶",
+      "details": "對話詳情",
+      "user": "用戶",
+      "agent": "代理人",
+      "lastUpdate": "最後更新",
+      "messages": "訊息記錄"
+    }
+  },
+  "common": {
+    "loading": "載入中...",
+    "error": "錯誤",
+    "retry": "重試",
+    "save": "儲存",
+    "cancel": "取消",
+    "delete": "刪除",
+    "edit": "編輯",
+    "create": "創建",
+    "close": "關閉",
+    "confirm": "確認",
+    "system": "系統",
+    "unassigned": "未分配",
+    "unknown": "未知",
+    "unset": "未設定",
+    "switchLanguage": "切換語言"
+  },
+  "loading": {
+    "tasks": "正在載入任務資料...",
+    "agents": "正在載入代理人資料...",
+    "knowledge": "正在載入知識庫...",
+    "strategy": "正在初始化商業顧問...",
+    "default": "載入中..."
+  }
+}

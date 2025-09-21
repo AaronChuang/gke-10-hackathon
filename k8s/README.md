@@ -6,14 +6,15 @@ This directory contains all Kubernetes manifests for deploying the GKE-10 Hackat
 
 ```
 k8s/
-├── namespace.yaml                 # Kubernetes namespace
-├── ksa.yaml                      # Kubernetes Service Account
-├── orchestrator-deployment.yaml  # Main API server deployment
-├── tech-analyst-deployment.yaml  # Technical Analyst Agent
-├── architect-deployment.yaml     # Architect Agent
-├── dashboard.yaml                # Frontend dashboard deployment
-├── backend-config.yaml          # BackendConfig for load balancing
-└── ingress.yaml                 # HTTP(S) load balancer configuration
+├── namespace.yaml                      # Kubernetes namespace
+├── ksa.yaml                           # Kubernetes Service Account
+├── orchestrator-deployment.yaml       # Main API server deployment
+├── proxy-agent-deployment.yaml        # Proxy Agent for conversation API
+├── omni-agent-deployment.yaml         # Omni Agent deployment
+├── agent-registry-listener-deployment.yaml # Agent registry listener
+├── dashboard.yaml                     # Frontend dashboard deployment
+├── backend-config.yaml               # BackendConfig for load balancing
+└── ingress.yaml                      # HTTP(S) load balancer configuration
 ```
 
 ## 🚀 Deployment Components
@@ -22,19 +23,45 @@ k8s/
 
 #### Orchestrator Service (`orchestrator-deployment.yaml`)
 - **Purpose**: Main FastAPI server and intelligent orchestrator agent
-- **Replicas**: 3 for high availability
-- **Resources**: 1 CPU, 2Gi memory per pod
+- **Replicas**: 1 for development
+- **Resources**: 250m CPU, 256Mi memory per pod
 - **Ports**: 8000 (HTTP API)
 - **Health Checks**: Liveness and readiness probes
 - **Features**:
   - Workload Identity integration
   - Environment-based configuration
-  - Horizontal Pod Autoscaling ready
+  - Agent management APIs
+  - Knowledge base management APIs
 
-#### Specialist Agent Services
-- **Tech Analyst** (`tech-analyst-deployment.yaml`): Technical analysis and recommendations
-- **Architect** (`architect-deployment.yaml`): System architecture design and optimization
-- **Configuration**: Similar to orchestrator with agent-specific environment variables
+#### Proxy Agent Service (`proxy-agent-deployment.yaml`)
+- **Purpose**: Conversation API and customer interaction handler
+- **Replicas**: 1 for development
+- **Resources**: 250m CPU, 256Mi memory per pod
+- **Ports**: 8000 (HTTP API)
+- **Health Checks**: Liveness and readiness probes
+- **Features**:
+  - Customer conversation handling
+  - Task delegation to specialist agents
+  - Real-time Firebase integration
+  - Session management
+
+#### Omni Agent Service (`omni-agent-deployment.yaml`)
+- **Purpose**: Multi-purpose AI agent for various tasks
+- **Replicas**: 1 for development
+- **Resources**: 250m CPU, 256Mi memory per pod
+- **Features**:
+  - Flexible task processing
+  - Pub/Sub integration
+  - Dynamic capability handling
+
+#### Agent Registry Listener (`agent-registry-listener-deployment.yaml`)
+- **Purpose**: Monitors and manages agent registry changes
+- **Replicas**: 1 for development
+- **Resources**: 250m CPU, 256Mi memory per pod
+- **Features**:
+  - Agent lifecycle management
+  - Registry synchronization
+  - Event-driven updates
 
 #### Dashboard Service (`dashboard.yaml`)
 - **Purpose**: Vue 3 frontend for monitoring and management
@@ -69,7 +96,11 @@ metadata:
 - **Load Balancer**: Google Cloud Load Balancer
 - **SSL**: Automatic SSL certificate provisioning
 - **Routing**: Path-based routing to services
-- **Backend Configuration**: Custom health checks and timeouts
+- **Routes**:
+  - `/api/conversation` → `proxy-agent-service` (Customer conversations)
+  - `/api/*` → `orchestrator-service` (Agent management, Knowledge base)
+  - `/*` → `dashboard-service` (Frontend dashboard)
+- **Backend Configuration**: Custom health checks and timeouts for both services
 
 ## 🔧 Configuration Management
 

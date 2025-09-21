@@ -12,7 +12,6 @@ export interface Task {
   stylist_output?: string
   error_source?: string
   error_message?: string
-  // 新增欄位支援增強架構
   user_id?: string
   initial_request?: any
   conversation_history?: ConversationMessage[]

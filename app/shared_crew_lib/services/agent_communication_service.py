@@ -10,7 +10,7 @@ from app.shared_crew_lib.schemas.agent_task_message import AgentTaskMessage
 logger = logging.getLogger(__name__)
 
 class AgentCommunicationService:
-    """代理人通信服務"""
+    """Agent Communication Service"""
     
     def __init__(self):
         self.publisher = gcp_clients.get_publisher_client()
@@ -18,7 +18,7 @@ class AgentCommunicationService:
         self.project_id = os.getenv("GCP_PROJECT_ID")
     
     async def get_available_agents(self) -> List[Dict[str, Any]]:
-        """獲取所有可用的代理人列表"""
+        """Get all available agents list"""
         try:
             agents_ref = self.db.collection("agents")
             agents = agents_ref.where("status", "==", "DEPLOYED").stream()
@@ -38,53 +38,53 @@ class AgentCommunicationService:
             return agent_list
             
         except Exception as e:
-            logger.error(f"獲取代理人列表失敗: {e}")
+            logger.error(f"Failed to get agents list: {e}")
             return []
     
     async def find_suitable_agent(self, task_description: str, required_capabilities: List[str] = None) -> Optional[Dict[str, Any]]:
-        """根據任務描述和所需能力找到合適的代理人"""
+        """Find suitable agent based on task description and required capabilities"""
         try:
             available_agents = await self.get_available_agents()
             
             if not available_agents:
                 return None
             
-            # 如果指定了所需能力，優先匹配
+            # If required capabilities are specified, prioritize matching
             if required_capabilities:
                 for agent in available_agents:
                     agent_capabilities = agent.get("capabilities", [])
                     if any(cap in agent_capabilities for cap in required_capabilities):
                         return agent
             
-            # 基於任務描述的關鍵字匹配
+            # Keyword matching based on task description
             task_lower = task_description.lower()
             
-            # 技術相關關鍵字
-            tech_keywords = ["技術", "架構", "程式", "代碼", "系統", "開發", "api", "database", "cloud"]
+            # Technical keywords
+            tech_keywords = ["technical", "architecture", "programming", "code", "system", "development", "api", "database", "cloud"]
             if any(keyword in task_lower for keyword in tech_keywords):
                 tech_agent = next((agent for agent in available_agents if "tech" in agent.get("agent_type", "").lower()), None)
                 if tech_agent:
                     return tech_agent
             
-            # 設計相關關鍵字
-            design_keywords = ["設計", "風格", "美觀", "ui", "ux", "介面", "視覺"]
+            # Design keywords
+            design_keywords = ["design", "style", "aesthetic", "ui", "ux", "interface", "visual"]
             if any(keyword in task_lower for keyword in design_keywords):
                 design_agent = next((agent for agent in available_agents if "design" in agent.get("agent_type", "").lower()), None)
                 if design_agent:
                     return design_agent
             
-            # 預設返回通用代理人
+            # Default return general agent
             proxy_agent = next((agent for agent in available_agents if agent.get("agent_type") == "proxy_agent"), None)
             return proxy_agent or available_agents[0] if available_agents else None
             
         except Exception as e:
-            logger.error(f"尋找合適代理人失敗: {e}")
+            logger.error(f"Failed to find suitable agent: {e}")
             return None
     
     async def forward_task_to_agent(self, target_agent_id: str, task_data: Dict[str, Any], source_agent_id: str = None) -> Dict[str, Any]:
-        """將任務轉發給指定的代理人"""
+        """Forward task to specified agent"""
         try:
-            # 構建任務消息
+            # Build task message
             task_message = AgentTaskMessage(
                 task_id=task_data.get("task_id"),
                 agent_id=target_agent_id,
@@ -93,7 +93,7 @@ class AgentCommunicationService:
                 forwarded=True
             )
             
-            # 發送到目標代理人的主題
+            # Send to target agent's topic
             topic_path = self.publisher.topic_path(self.project_id, f"{target_agent_id}-topic")
             
             message_data = task_message.dict()
@@ -105,7 +105,7 @@ class AgentCommunicationService:
             
             message_id = future.result()
             
-            logger.info(f"任務轉發成功: {task_data.get('task_id')} -> {target_agent_id}")
+            logger.info(f"Task forwarded successfully: {task_data.get('task_id')} -> {target_agent_id}")
             
             return {
                 "status": "SUCCESS",
@@ -115,7 +115,7 @@ class AgentCommunicationService:
             }
             
         except Exception as e:
-            logger.error(f"任務轉發失敗: {e}")
+            logger.error(f"Task forwarding failed: {e}")
             return {
                 "status": "ERROR",
                 "error": str(e),
@@ -124,7 +124,7 @@ class AgentCommunicationService:
             }
     
     async def broadcast_agent_registry_update(self, action: str, agent_data: Dict[str, Any]):
-        """廣播代理人註冊表更新"""
+        """Broadcast agent registry update"""
         try:
             registry_topic = self.publisher.topic_path(self.project_id, "agent-registry-updates")
             
@@ -140,16 +140,16 @@ class AgentCommunicationService:
             )
             
             message_id = future.result()
-            logger.info(f"廣播代理人註冊表更新: {action} - {agent_data.get('agent_id')}")
+            logger.info(f"Broadcast agent registry update: {action} - {agent_data.get('agent_id')}")
             
             return {"status": "SUCCESS", "message_id": message_id}
             
         except Exception as e:
-            logger.error(f"廣播註冊表更新失敗: {e}")
+            logger.error(f"Failed to broadcast registry update: {e}")
             return {"status": "ERROR", "error": str(e)}
     
     async def get_agent_capabilities(self, agent_id: str) -> List[str]:
-        """獲取指定代理人的能力列表"""
+        """Get specified agent's capabilities list"""
         try:
             agent_doc = self.db.collection("agents").document(agent_id).get()
             if agent_doc.exists:
@@ -158,25 +158,25 @@ class AgentCommunicationService:
             return []
             
         except Exception as e:
-            logger.error(f"獲取代理人能力失敗: {e}")
+            logger.error(f"Failed to get agent capabilities: {e}")
             return []
     
     async def update_agent_capabilities(self, agent_id: str, capabilities: List[str]):
-        """更新代理人的能力列表"""
+        """Update agent's capabilities list"""
         try:
             self.db.collection("agents").document(agent_id).update({
                 "capabilities": capabilities,
                 "updated_at": firestore.SERVER_TIMESTAMP
             })
             
-            # 廣播更新
+            # Broadcast update
             agent_doc = self.db.collection("agents").document(agent_id).get()
             if agent_doc.exists:
                 await self.broadcast_agent_registry_update("AGENT_UPDATED", agent_doc.to_dict())
             
-            logger.info(f"更新代理人能力: {agent_id}")
+            logger.info(f"Updated agent capabilities: {agent_id}")
             return {"status": "SUCCESS"}
             
         except Exception as e:
-            logger.error(f"更新代理人能力失敗: {e}")
+            logger.error(f"Failed to update agent capabilities: {e}")
             return {"status": "ERROR", "error": str(e)}

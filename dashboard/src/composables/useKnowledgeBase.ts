@@ -7,6 +7,7 @@ import {
   type Unsubscribe 
 } from 'firebase/firestore'
 import type { KnowledgeEntry, IndexWebsiteRequest } from '../types/knowledge'
+import { API_URLS } from '@/config/api'
 
 export function useKnowledgeBase() {
   const knowledgeEntries = ref<KnowledgeEntry[]>([])
@@ -87,7 +88,7 @@ export function useKnowledgeBase() {
   const indexWebsite = async (request: IndexWebsiteRequest): Promise<boolean> => {
     try {
       // 調用後端 API 來索引網站
-      const response = await fetch('/api/knowledge-base/index', {
+      const response = await fetch(`${API_URLS.KNOWLEDGE_BASE}/index`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -111,7 +112,7 @@ export function useKnowledgeBase() {
 
   const deleteKnowledgeEntry = async (kbId: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/knowledge-base/${kbId}`, {
+      const response = await fetch(`${API_URLS.KNOWLEDGE_BASE}/${kbId}`, {
         method: 'DELETE'
       })
 
@@ -131,7 +132,7 @@ export function useKnowledgeBase() {
 
   const reindexWebsite = async (kbId: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/knowledge-base/reindex/${kbId}`, {
+      const response = await fetch(`${API_URLS.KNOWLEDGE_BASE}/reindex/${kbId}`, {
         method: 'POST'
       })
 

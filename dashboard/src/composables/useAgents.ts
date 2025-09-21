@@ -6,7 +6,8 @@ import {
   onSnapshot, 
   type Unsubscribe 
 } from 'firebase/firestore'
-import type { Agent, CreateAgentRequest } from '../types/agent'
+import type { Agent, CreateAgentRequest } from '@/types/agent'
+import { API_URLS } from '@/config/api'
 
 export function useAgents() {
   const agents = ref<Agent[]>([])
@@ -86,7 +87,7 @@ export function useAgents() {
 
   const createAgent = async (agentData: CreateAgentRequest): Promise<boolean> => {
     try {
-      const response = await fetch('/api/agents', {
+      const response = await fetch(API_URLS.AGENTS, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +110,7 @@ export function useAgents() {
 
   const updateAgent = async (agentId: string, updates: Partial<Agent>): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/agents/${agentId}`, {
+      const response = await fetch(`${API_URLS.AGENTS}/${agentId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -139,7 +140,7 @@ export function useAgents() {
         return false
       }
       
-      const response = await fetch(`/api/agents/${agentId}`, {
+      const response = await fetch(`${API_URLS.AGENTS}/${agentId}`, {
         method: 'DELETE'
       })
       

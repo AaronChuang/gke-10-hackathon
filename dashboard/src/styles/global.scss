@@ -14,8 +14,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: $bg-primary;
-  color: $text-secondary;
-  line-height: 1.6;
+  color: $text-primary;
+  line-height: 1.7;
+  font-size: $font-base;
 }
 
 // 狀態徽章樣式

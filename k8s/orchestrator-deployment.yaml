@@ -19,6 +19,7 @@ spec:
       containers:
         - name: orchestrator-container
           image: asia-east1-docker.pkg.dev/gke-10-hackathon-471902/ai-agents-repo/ai-agent-base:latest
+          imagePullPolicy: Always
           command: ["uvicorn", "app.workers.orchestrator:app", "--host", "0.0.0.0", "--port", "8000"]
           ports:
             - containerPort: 8000
@@ -50,14 +51,11 @@ spec:
               value: "proxy-agent-sub"
             - name: AGENT_REGISTRY_SUBSCRIPTION_ID
               value: "agent-registry-updates-sub"
-            - name: GOOGLE_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: ai-agent-secrets
-                  key: google-api-key
+            - name: CRAWLER_TOPIC_ID
+              value: "rag-index"
             - name: PYTHONPATH
-              value: "/workspace"
-          workingDir: /workspace
+              value: "/code"
+          workingDir: /code
 
 ---
 
@@ -68,6 +66,7 @@ metadata:
   namespace: ai-agents
   annotations:
     cloud.google.com/backend-config: '{"default": "orchestrator-backend-config"}'
+    cloud.google.com/neg: '{"ingress": true}'
 spec:
   type: ClusterIP
   selector:

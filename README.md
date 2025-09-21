@@ -5,7 +5,7 @@
 [![GKE Autopilot](https://img.shields.io/badge/GKE-Autopilot-4285F4?style=for-the-badge&logo=google-kubernetes-engine)](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview)
 [![Gemini](https://img.shields.io/badge/Powered%20by-Gemini-8E77D3?style=for-the-badge&logo=google-gemini)](https://deepmind.google/technologies/gemini/)
 
-A dynamic, manageable AI agent ecosystem built on Google Cloud for the GKE Turns 10 Hackathon. This platform supports intelligent task routing, dynamic agent management, a Retrieval-Augmented Generation (RAG) knowledge base, and real-time monitoring, all orchestrated on GKE.
+A dynamic, manageable AI agent ecosystem built on Google Cloud for the GKE Turns 10 Hackathon. This platform features a decoupled microservices architecture with a management dashboard, an injectable customer-facing widget, and a backend powered by multiple AI agents. The entire system is orchestrated on GKE, supporting intelligent task routing, dynamic agent management, and a Retrieval-Augmented Generation (RAG) knowledge base.
 
 **Live Demo URL:** `[Your Deployed Dashboard URL Here]`
 
@@ -17,6 +17,17 @@ This project was created for the **GKE Turns 10 Hackathon** (September 12 - Sept
 * **Powered by GKE:** The entire backend, from the intelligent orchestrator to the specialized AI agents and the management dashboard, is containerized and runs on a GKE Autopilot cluster for hands-off, optimized infrastructure management.
 * **Leveraging Google AI:** The system's intelligence is powered by Google's Gemini models via Vertex AI, with a RAG implementation using Vector Search to provide grounded, context-aware responses.
 
+### Challenges We Ran Into
+
+*   **State Management in a Serverless World:** Coordinating state across multiple serverless GKE services and asynchronous agents was complex. We solved this by using Firestore as a centralized, real-time state database, providing a single source of truth for all components.
+*   **Preventing Agent Loops:** Early prototypes occasionally resulted in agents getting stuck in infinite loops. We implemented a guardrails system with a two-retry termination policy and detailed logging to prevent this and ensure system stability.
+
+### Accomplishments & Learnings
+
+*   **Decoupled Architecture is Key:** The microservices approach was highly effective. It allowed us to develop, deploy, and scale the dashboard, orchestrator, and agents independently. GKE Autopilot made managing this complex setup surprisingly straightforward.
+*   **The Power of Human-AI Collaboration:** Pairing a human architect with AI assistants for coding and analysis proved to be a massive productivity multiplier. This hybrid team model allowed us to build a sophisticated system in a fraction of the time.
+*   **Non-Invasive Integration Works:** The injectable widget strategy successfully enhanced an existing application without touching its source code, demonstrating a powerful pattern for modernizing legacy systems.
+
 ## 👥 Our Team: A Human-AI Collaboration
 
 This project was brought to life through a unique development methodology, pairing a human developer with a team of advanced AI assistants. This hybrid approach allowed for rapid prototyping, complex problem-solving, and sophisticated code generation.
@@ -27,67 +38,62 @@ This project was brought to life through a unique development methodology, pairi
 
 ## ✨ Core Features
 
-* **🤖 Dynamic Agent Ecosystem:** An intelligent orchestrator routes tasks to a pool of specialist agents (`Stylist`, `Tech Analyst`, etc.), with the ability to dynamically create and manage agents via a UI.
-* **🧠 Retrieval-Augmented Generation (RAG):** All agent responses are strictly grounded in a knowledge base created by ingesting external websites, preventing factual invention and ensuring relevance.
-* **📊 Comprehensive Monitoring Dashboard:** A Vue 3 dashboard provides real-time task monitoring, agent management, and knowledge base control, powered by a live connection to Firestore.
-* **🛡️ Intelligent Guardrails System:** Includes mechanisms like a two-retry termination policy to prevent infinite loops and detailed token consumption tracking for cost analysis.
+* **🤖 Decoupled Microservices:** The backend is split into an **Orchestrator** for management and a **Proxy Agent** for conversations, allowing independent scaling and development.
+* **🧠 Dynamic Agent Management:** A comprehensive Vue 3 dashboard allows for the creation, monitoring, and management of AI agents in real-time via a direct Firebase connection.
+* **🗣️ Conversational AI Widget:** A lightweight, injectable Preact widget provides AI-powered customer assistance on any website, connecting to the backend via a GKE Ingress.
+* **🧠 Retrieval-Augmented Generation (RAG):** Agent responses are grounded in a knowledge base created by ingesting external websites, ensuring answers are relevant and factually based.
+* **🛡️ Intelligent Guardrails:** The system includes mechanisms like retry limits to prevent infinite loops and tracks token consumption for cost analysis.
+* **🔄 Agent-to-Agent (A2A) Communication:** Our architecture supports both inter-service **Agent-to-Agent (A2A)** communication via Pub/Sub and intra-service collaboration using the CrewAI framework, enabling complex, multi-agent workflows.
 
 ## 🏗️ System Architecture
 
 A high-level overview of the component relationships and data flow within the ecosystem.
 
-```mermaid
----
-config:
-  layout: elk
-  theme: mc
----
-flowchart TD
- subgraph subGraph0["User Layer"]
-    direction LR
-        U_E_COMMERCE["E-commerce User"]
-        U_ADMIN["Admin User"]
-  end
- subgraph subGraph1["Frontend Layer"]
-    direction LR
-        WIDGET["Injectable Stylist Widget<br>(Preact)"]
-        DASHBOARD["Management Dashboard<br>(Vue 3)"]
-  end
- subgraph subGraph2["Cloud Entrypoint"]
-        INGRESS["GKE Ingress<br>(Google Cloud Load Balancer)"]
-  end
- subgraph subGraph3["Backend Services (GKE Autopilot)"]
-        ORCHESTRATOR["Orchestrator Agent<br>(FastAPI + CrewAI)"]
-        AGENT_POOL["Specialist Agent Pool<br>(Stylist, Architect, etc.)"]
-  end
- subgraph subGraph4["Core GCP Services"]
-        PUBSUB["Pub/Sub<br>(Async Messaging)"]
-        FIRESTORE["Firestore<br>(Real-time State &amp; Logs)"]
-        VERTEX_AI["Vertex AI<br>(Gemini 2.5 Pro)"]
-        VECTOR_SEARCH["Vector Search<br>(RAG Knowledge Base)"]
-        GCS["Cloud Storage<br>(Widget Hosting)"]
-  end
-    U_E_COMMERCE -- Interacts with --> WIDGET
-    U_ADMIN -- Manages via --> DASHBOARD
-    WIDGET -- API Calls --> INGRESS
-    DASHBOARD -- "API Calls & Real-time Sync" --> INGRESS
-    INGRESS -- Routes traffic --> ORCHESTRATOR
-    INGRESS -- Serves --> DASHBOARD
-    ORCHESTRATOR -- Pub/Sub Tasks --> AGENT_POOL
-    AGENT_POOL -- Accesses --> VERTEX_AI & VECTOR_SEARCH
-    ORCHESTRATOR -- Accesses --> VERTEX_AI & VECTOR_SEARCH
-    ORCHESTRATOR -- Writes to --> FIRESTORE
-    AGENT_POOL -- Writes to --> FIRESTORE
-    FIRESTORE -- "Real-time updates" --> DASHBOARD
-    GCS -- Serves JS file --> WIDGET
-```
+
+![System Architecture Diagram for the AI Agentic Ecosystem](./docs/images/system-architecture.png)
+
+### System Flow
+1.  **Access Site:** The user visits the Online Boutique application.
+2.  **Inject JS:** Cloud Storage serves the `widget.js` file, which is injected into the site.
+3.  **Interact:** The user interacts with the AI Widget or the Admin Dashboard, sending requests to the GKE Ingress.
+4.  **Publish Task:** The `Proxy Agent` receives the request and publishes a task to Pub/Sub for asynchronous processing.
+5.  **Trigger Agent:** Pub/Sub triggers the appropriate `Agent Worker Pod`.
+6.  **Execute & Write State:** The agent completes the task and writes the result and status to Firestore.
+7.  **Calls for Intelligence:** Throughout the process, agents call Vertex AI for LLM and RAG capabilities.
+(Real-time updates are pushed from Firestore back to the user's browser.)
+
+
+
+### Core Workflow Sequence
+
+This sequence diagram illustrates the end-to-end flow of a conversational AI request, from initial user interaction to complex, asynchronous task delegation between agents.
+
+
+![Core Workflow Sequence Diagram](./docs/images/core-workflow-sequence.png)
+
+
+### "AI as a Company": Our Architectural Philosophy
+
+To achieve a truly scalable and manageable system, we architected our entire AI ecosystem based on a powerful metaphor: **AI as a Company**. Each component has a clearly defined corporate role, enabling a sophisticated and decoupled collaboration model.
+
+* **The Front Desk (`Proxy Agent`):** This is the company's sole public-facing department. It directly handles all initial customer conversations via the injectable widget. It is trained to manage simple interactions and answer basic questions on its own.
+
+* **The General Manager (`Orchestrator Agent`):** This is the company's internal decision-making core. It does not interact with customers directly. When the `Proxy Agent` encounters a complex request it cannot handle, it submits an "internal work ticket" (a task) to the `Orchestrator`. The `Orchestrator`'s job is to analyze this complex task, break it down if necessary, and delegate it to the most appropriate specialist department.
+
+* **Specialist Departments (`Agent Workers`):** These are the company's expert teams (e.g., `Styling Dept.`, `Market Analysis Dept.`). Each is a specialized AI agent that receives tasks from the `Orchestrator` and executes them. These departments can be dynamically created, configured, and managed through the dashboard.
+
+* **Corporate Communication Channels:** Our "company" utilizes a hybrid communication model:
+    * **Inter-Departmental Memos (`Google Cloud Pub/Sub`):** For asynchronous, decoupled communication *between* major departments (e.g., from `Proxy Agent` to `Orchestrator`, or `Orchestrator` to `Stylist Agent`). This ensures the system is resilient and scalable.
+    * **Intra-Departmental Teamwork (`CrewAI`):** For synchronous, complex collaboration *within* a single department. For example, to fulfill one task, the `Styling Agent` might internally coordinate a small crew of sub-agents (a "trend researcher," a "copywriter," etc.) to produce the final output.
+
+
 ## 🚀 Core Technology Stack
 
 ### **Backend Technologies**
 -   **FastAPI**: High-performance Python web framework for the API layer and orchestrator service
 -   **CrewAI**: Framework for orchestrating role-playing, autonomous AI agents with specialized capabilities
 -   **Google Cloud Firestore**: NoSQL document database for real-time state management and task tracking
--   **Google Cloud Pub/Sub**: Asynchronous messaging queue for inter-agent communication
+-   **Google Cloud Pub/Sub**: Asynchronous messaging queue, acting as the **Message Coordination Platform (MCP)** for inter-agent communication
 -   **Google Vertex AI**: Serves the Gemini family of Large Language Models for AI processing
 -   **LangChain**: Framework for developing LLM-powered applications with RAG capabilities
 -   **Python 3.9+**: Core backend language with comprehensive type hints
@@ -179,32 +185,38 @@ gcloud builds submit --tag asia-east1-docker.pkg.dev/[PROJECT-ID]/[REPO]/ai-agen
 ```
 
 ### 4. Deploy to GKE
+Apply the Kubernetes manifests in the `k8s/` directory. The recommended order ensures that dependencies like namespaces and configurations are created first.
 ```bash
-# Apply Kubernetes manifests in order
+# 1. Namespace and Service Account
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/ksa.yaml
-kubectl apply -f k8s/orchestrator-deployment.yaml
-kubectl apply -f k8s/tech-analyst-deployment.yaml
-kubectl apply -f k8s/architect-deployment.yaml
-kubectl apply -f k8s/dashboard.yaml
+
+# 2. Backend Configurations
 kubectl apply -f k8s/backend-config.yaml
+
+# 3. Deployments
+kubectl apply -f k8s/orchestrator-deployment.yaml
+kubectl apply -f k8s/proxy-agent-deployment.yaml
+kubectl apply -f k8s/omni-agent-deployment.yaml
+kubectl apply -f k8s/agent-registry-listener-deployment.yaml
+kubectl apply -f k8s/dashboard.yaml
+
+# 4. Expose Services with Ingress
 kubectl apply -f k8s/ingress.yaml
 
-# Verify deployment
-kubectl get pods -n ai-agents
-kubectl get services -n ai-agents
-kubectl get ingress -n ai-agents
+# 5. Verify Deployment
+kubectl get pods,services,ingress -n ai-agents
 ```
 
 ### 5. Deploy Widget to Cloud Storage
 ```bash
-# Build and deploy the stylist widget
+# Build and deploy the AI assistant widget
 cd stylist-widget
 pnpm run build
-gcloud storage cp dist/stylist-widget.js gs://gke-10-hackathon-assets/stylist-widget.js
+gcloud storage cp dist/stylist-widget.js gs://gke-10-hackathon-assets/ai-assistant-widget.js
 
 # Verify widget deployment
-curl -I https://storage.googleapis.com/gke-10-hackathon-assets/stylist-widget.js
+curl -I https://storage.googleapis.com/gke-10-hackathon-assets/ai-assistant-widget.js
 ```
 
 ## **🤝 Contributing**

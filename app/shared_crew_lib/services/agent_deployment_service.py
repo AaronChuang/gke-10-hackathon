@@ -13,20 +13,20 @@ from app.shared_crew_lib.schemas.agent_registry import AgentRegistryEntry
 logger = logging.getLogger(__name__)
 
 class AgentInfo(BaseModel):
-    agent_id: str = Field(..., description="代理人唯一識別碼")
-    agent_type: str = Field(..., description="代理人類型")
-    name: str = Field(default="", description="代理人名稱")
-    description: str = Field(default="", description="代理人描述")
-    role: str = Field(default="", description="代理人角色")
-    goal: str = Field(default="", description="代理人目標")
-    backstory: str = Field(default="", description="代理人背景故事")
-    capabilities: list = Field(default_factory=list, description="代理人能力列表")
-    status: str = Field(default="CREATING", description="代理人狀態")
+    agent_id: str = Field(..., description="Agent unique identifier")
+    agent_type: str = Field(..., description="Agent type")
+    name: str = Field(default="", description="Agent name")
+    description: str = Field(default="", description="Agent description")
+    role: str = Field(default="", description="Agent role")
+    goal: str = Field(default="", description="Agent goal")
+    backstory: str = Field(default="", description="Agent backstory")
+    capabilities: list = Field(default_factory=list, description="Agent capabilities list")
+    status: str = Field(default="CREATING", description="Agent status")
     
     @classmethod
     def from_registry_entry(cls, entry: AgentRegistryEntry) -> "AgentInfo":
-        """從註冊表項目創建部署資訊"""
-        # 從 agent_id 推斷 agent_type (例如: tech-analyst -> tech_analyst)
+        """Create deployment info from registry entry"""
+        # Infer agent_type from agent_id (e.g.: tech-analyst -> tech_analyst)
         agent_type = entry.agent_id.replace('-', '_')
         return cls(
             agent_id=entry.agent_id,
@@ -38,9 +38,27 @@ class AgentInfo(BaseModel):
         )
 
 class AgentDeploymentService:
-    """代理人部署服務"""
+    """Agent Deployment Service"""
     
     def __init__(self):
+        """Initialize Kubernetes client and Pub/Sub client"""
+        try:
+            # Try to load in-cluster configuration first (for production)
+            config.load_incluster_config()
+            logger.info("Loaded in-cluster Kubernetes configuration")
+        except Exception as e:
+            logger.warning(f"Failed to load in-cluster config: {e}")
+            try:
+                # Fall back to local kubeconfig (for development)
+                config.load_kube_config()
+                logger.info("Loaded local Kubernetes configuration")
+            except Exception as e2:
+                logger.warning(f"Failed to load local kube config: {e2}")
+                logger.warning("Kubernetes client will not be available - agent deployment features disabled")
+                self.k8s_client = None
+                self.publisher = gcp_clients.get_publisher_client()
+                return
+        
         self.project_id = os.getenv("GCP_PROJECT_ID")
         self.cluster_name = os.getenv("GKE_CLUSTER_NAME", "ai-agents-cluster")
         self.cluster_zone = os.getenv("GKE_CLUSTER_ZONE", "asia-east1-a")
@@ -51,12 +69,13 @@ class AgentDeploymentService:
         self.db = gcp_clients.get_firestore_client()
 
         try:
-            config.load_incluster_config()
-        except:
-            config.load_kube_config()  # 本地開發
-        
-        self.k8s_apps_v1 = client.AppsV1Api()
-        self.k8s_core_v1 = client.CoreV1Api()
+            self.k8s_apps_v1 = client.AppsV1Api()
+            self.k8s_core_v1 = client.CoreV1Api()
+            logger.info("Kubernetes API clients initialized successfully")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Kubernetes API clients: {e}")
+            self.k8s_apps_v1 = None
+            self.k8s_core_v1 = None
     
     async def create_agent_resources(self, agent_info: AgentInfo) -> Dict[str, Any]:
         try:
@@ -74,7 +93,7 @@ class AgentDeploymentService:
             }
             
         except Exception as e:
-            logger.error(f"創建代理人資源失敗: {e}")
+            logger.error(f"Failed to create agent resources: {e}")
             await self._update_agent_status(agent_info.agent_id, "FAILED")
             return {
                 "status": "ERROR",
@@ -86,7 +105,7 @@ class AgentDeploymentService:
         try:
             agent_doc = self.db.collection("agents").document(agent_id).get()
             if not agent_doc.exists:
-                return {"status": "ERROR", "error": "代理人不存在"}
+                return {"status": "ERROR", "error": "Agent does not exist"}
             
             agent_data = agent_doc.to_dict()
             
@@ -96,7 +115,7 @@ class AgentDeploymentService:
             
             agent_doc.reference.delete()
             
-            # 5. 通知其他代理人
+            # 5. Notify other agents
             await self._broadcast_agent_removal(agent_id)
             
             return {
@@ -105,7 +124,7 @@ class AgentDeploymentService:
             }
             
         except Exception as e:
-            logger.error(f"刪除代理人資源失敗: {e}")
+            logger.error(f"Failed to delete agent resources: {e}")
             return {
                 "status": "ERROR",
                 "error": str(e),
@@ -119,10 +138,10 @@ class AgentDeploymentService:
         topic_path = self.publisher.topic_path(self.project_id, topic_name)
         subscription_path = self.subscriber.subscription_path(self.project_id, subscription_name)
         
-        # 創建主題
+        # Create topic
         try:
             self.publisher.create_topic(request={"name": topic_path})
-            logger.info(f"創建主題: {topic_path}")
+            logger.info(f"Created topic: {topic_path}")
         except Exception as e:
             if "already exists" not in str(e).lower():
                 raise e
@@ -135,7 +154,7 @@ class AgentDeploymentService:
                     "ack_deadline_seconds": 60
                 }
             )
-            logger.info(f"創建訂閱: {subscription_path}")
+            logger.info(f"Created subscription: {subscription_path}")
         except Exception as e:
             if "already exists" not in str(e).lower():
                 raise e

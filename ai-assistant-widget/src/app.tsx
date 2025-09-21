@@ -14,7 +14,7 @@ function generateUUIDv4() {
 }
 
 const getOrSetUserId = (): string => {
-    const STORAGE_KEY = 'ai_stylist_user_id';
+    const STORAGE_KEY = 'ai_user_id';
     let userId = localStorage.getItem(STORAGE_KEY);
     if (!userId) {
         userId = typeof crypto.randomUUID === 'function'
@@ -25,7 +25,7 @@ const getOrSetUserId = (): string => {
     return userId;
 };
 
-// 訊息類型定義
+// Message type definition
 interface Message {
     id: string;
     type: 'user' | 'ai' | 'system';
@@ -34,13 +34,13 @@ interface Message {
     isLoading?: boolean;
 }
 
-// 快捷按鈕定義
+// Quick action buttons definition
 const QUICK_ACTIONS = [
-    '換個休閒風',
-    '適合上班的搭配',
-    '有其他鞋子建議嗎？',
-    '適合約會的造型',
-    '換個顏色搭配'
+    'Tell me about this product',
+    'What are the key features?',
+    'How does this compare to alternatives?',
+    'Is this suitable for my needs?',
+    'What should I consider before buying?'
 ];
 
 
@@ -64,7 +64,7 @@ const FloatingButton: FC<FloatingButtonProps> = ({ onClick, isOpen, hasUnread })
     </button>
 );
 
-// 訊息氣泡組件
+// Message bubble component
 interface MessageBubbleProps {
     message: Message;
 }
@@ -91,7 +91,7 @@ const MessageBubble: FC<MessageBubbleProps> = ({ message }) => {
     );
 };
 
-// 快捷按鈕組件
+// Quick actions component
 interface QuickActionsProps {
     onActionClick: (action: string) => void;
     disabled: boolean;
@@ -112,7 +112,7 @@ const QuickActions: FC<QuickActionsProps> = ({ onActionClick, disabled }) => (
     </div>
 );
 
-// 輸入框組件
+// Chat input component
 interface ChatInputProps {
     onSendMessage: (message: string) => void;
     disabled: boolean;
@@ -143,7 +143,7 @@ const ChatInput: FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
                     value={inputValue}
                     onChange={(e) => setInputValue((e.target as HTMLInputElement).value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="輸入您的問題..."
+                    placeholder="Type your question..."
                     disabled={disabled}
                     className="chat-input"
                 />
@@ -161,7 +161,7 @@ const ChatInput: FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
     );
 };
 
-// 主對話視窗組件
+// Main chat window component
 interface ChatWindowProps {
     isOpen: boolean;
     messages: Message[];
@@ -193,7 +193,7 @@ const ChatWindow: FC<ChatWindowProps> = ({
                 <div className="header-info">
                     <div className="ai-avatar">🤖</div>
                     <div>
-                        <h3 className="ai-widget-header-title">AI 造型師</h3>
+                        <h3 className="ai-widget-header-title">AI Assistant</h3>
                         <div className="product-info">{productTitle}</div>
                     </div>
                 </div>
@@ -241,11 +241,11 @@ export const App: FC = () => {
             dbRef.current = getFirestore(app);
         } catch (e) {
             console.error("Firebase init failed:", e);
-            addMessage('system', '無法初始化 AI 服務，請重新整理頁面。');
+            addMessage('system', 'Unable to initialize AI service. Please refresh the page.');
         }
     }, [firebaseConfig]);
 
-    // 添加訊息的輔助函數
+    // Helper function to add messages
     const addMessage = (type: 'user' | 'ai' | 'system', content: string, isLoading = false): string => {
         const messageId = generateUUIDv4();
         const newMessage: Message = {
@@ -265,7 +265,7 @@ export const App: FC = () => {
         return messageId;
     };
     
-    // 更新訊息的輔助函數
+    // Helper function to update messages
     const updateMessage = (messageId: string, content: string, isLoading = false) => {
         setMessages(prev => prev.map(msg => 
             msg.id === messageId 
@@ -275,7 +275,7 @@ export const App: FC = () => {
     };
     
     useEffect(() => {
-        // 更全面的產品標題檢測
+        // Comprehensive product title detection
         const selectors = [
             'h1.product-name',
             'h1.product-title', 
@@ -287,7 +287,7 @@ export const App: FC = () => {
             '.item-title'
         ];
         
-        let productName = '未知商品';
+        let productName = 'Unknown Product';
         
         for (const selector of selectors) {
             const element = document.querySelector(selector);
@@ -297,23 +297,23 @@ export const App: FC = () => {
             }
         }
         
-        // 如果還是找不到，嘗試從 meta 標籤或 title 取得
-        if (productName === '未知商品') {
+        // If still not found, try to get from meta tags or title
+        if (productName === 'Unknown Product') {
             const metaTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content');
             const pageTitle = document.title;
             
             if (metaTitle) {
                 productName = metaTitle;
-            } else if (pageTitle && !pageTitle.includes('首頁') && !pageTitle.includes('Home')) {
+            } else if (pageTitle && !pageTitle.includes('Home') && !pageTitle.includes('首頁')) {
                 productName = pageTitle.split('|')[0].split('-')[0].trim();
             }
         }
         
         setProductTitle(productName);
         
-        // 添加初始問候語
+        // Add initial greeting
         setTimeout(() => {
-            addMessage('ai', `嗨！我是您的專屬 AI 造型師 👋<br/>我可以為這件「${productName}」提供什麼樣的搭配建議呢？`);
+            addMessage('ai', `Hi! I'm your AI Assistant 👋<br/>I'm here to help you learn more about "${productName}". What would you like to know?`);
         }, 500);
     }, []);
 
@@ -325,28 +325,28 @@ export const App: FC = () => {
     };
 
     const handleSendMessage = async (userMessage: string) => {
-        // 添加用戶訊息
+        // Add user message
         addMessage('user', userMessage);
         
-        // 添加 AI 載入中訊息
+        // Add AI loading message
         const loadingMessageId = addMessage('ai', '', true);
         
         setIsProcessing(true);
         
         try {
-            // 取消之前的訂閱
+            // Cancel previous subscription
             if (unsubscribeRef.current) unsubscribeRef.current();
             
-            // 構建對話歷史
+            // Build conversation history - corrected field name to text
             const conversationHistory = messages
                 .filter(msg => msg.type !== 'system' && !msg.isLoading)
                 .map(msg => ({
                     sender: msg.type === 'user' ? 'user' : 'ai',
-                    text: msg.content.replace(/<[^>]*>/g, '') // 移除 HTML 標籤
+                    text: msg.content.replace(/<[^>]*>/g, '') // Remove HTML tags
                 }));
             
-            // 使用新的對話式 API
-            const response = await fetch('http://34.160.253.241:8000/api/conversation', {
+            // Use GKE ingress endpoint for conversation API
+            const response = await fetch('http://104.155.232.179/conversation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -355,12 +355,12 @@ export const App: FC = () => {
                     conversation_history: conversationHistory,
                     product_context: {
                         name: productTitle,
-                        description: `用戶正在瀏覽的商品：${productTitle}`
+                        description: `Product the user is browsing: ${productTitle}`
                     }
                 })
             });
 
-            if (!response.ok) throw new Error(`API 請求失敗: ${response.statusText}`);
+            if (!response.ok) throw new Error(`API request failed: ${response.statusText}`);
 
             const data = await response.json();
             const taskId = data.task_id;
@@ -369,7 +369,7 @@ export const App: FC = () => {
             
             currentTaskId.current = taskId;
 
-            // 如果是直接回覆，立即顯示結果
+            // If direct reply, show result immediately
             if (action === 'DIRECT_REPLY') {
                 setIsProcessing(false);
                 const htmlResult = await marked.parse(agentResponse || '');
@@ -377,8 +377,8 @@ export const App: FC = () => {
                 return;
             }
 
-            // 如果是委派，先顯示安撫性回應，然後監聽任務狀態
-            if (action === 'DELEGATED') {
+            // If task delegated, show reassuring response first, then monitor task status
+            if (action === 'TASK_DELEGATED') {
                 const htmlResult = await marked.parse(agentResponse || '');
                 updateMessage(loadingMessageId, htmlResult);
                 
@@ -390,12 +390,12 @@ export const App: FC = () => {
                         if (task.status === 'COMPLETED' && task.stylist_output) {
                             setIsProcessing(false);
                             const finalResult = await marked.parse(task.stylist_output || '');
-                            // 添加新的 AI 回應而不是更新載入訊息
+                            // Add new AI response instead of updating loading message
                             addMessage('ai', finalResult);
                             if (unsubscribeRef.current) unsubscribeRef.current();
                         } else if (task.status === 'FAILED') {
                             setIsProcessing(false);
-                            addMessage('ai', `抱歉，處理您的請求時發生錯誤：${task.error_message || '未知錯誤'}`);
+                            addMessage('ai', `Sorry, an error occurred while processing your request: ${task.error_message || 'Unknown error'}`);
                             if (unsubscribeRef.current) unsubscribeRef.current();
                         }
                     }
@@ -404,8 +404,8 @@ export const App: FC = () => {
 
         } catch (err: any) {
             setIsProcessing(false);
-            const errorMessage = err.message || '網路連線錯誤，請稍後再試';
-            updateMessage(loadingMessageId, `抱歉，發生了錯誤：${errorMessage}`);
+            const errorMessage = err.message || 'Network connection error, please try again later';
+            updateMessage(loadingMessageId, `Sorry, an error occurred: ${errorMessage}`);
             console.error('Widget API Error:', err);
         }
     };

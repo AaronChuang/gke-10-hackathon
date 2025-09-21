@@ -9,10 +9,10 @@ export default defineConfig({
     rollupOptions: {
       output: {
         format: 'iife',
-        name: 'AIStylistWidget',
+        name: 'AIAssistantWidget',
         manualChunks: undefined,
-        entryFileNames: 'stylist-widget.js',
-        assetFileNames: 'stylist-widget.[ext]',
+        entryFileNames: 'ai-assistant-widget.js',
+        assetFileNames: 'ai-assistant-widget.[ext]',
         inlineDynamicImports: true,
       },
       external: [],

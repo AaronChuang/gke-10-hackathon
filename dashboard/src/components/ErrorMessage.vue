@@ -2,10 +2,11 @@
   <div class="error-container">
     <div class="error-icon">⚠️</div>
     <div class="error-content">
-      <h3 class="error-title">連線錯誤</h3>
+      <h3 class="error-title">{{ $t('common.error') }}</h3>
       <p class="error-message">{{ message }}</p>
-      <button v-if="showRetry" @click="$emit('retry')" class="retry-button">
-        重新連線
+      <button @click="$emit('retry')" class="retry-btn">
+        <i class="fas fa-redo"></i>
+        {{ $t('common.retry') }}
       </button>
     </div>
   </div>
