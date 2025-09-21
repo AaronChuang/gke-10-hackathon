@@ -7,8 +7,9 @@
 
 A dynamic, manageable AI agent ecosystem built on Google Cloud for the GKE Turns 10 Hackathon. This platform features a decoupled microservices architecture with a management dashboard, an injectable customer-facing widget, and a backend powered by multiple AI agents. The entire system is orchestrated on GKE, supporting intelligent task routing, dynamic agent management, and a Retrieval-Augmented Generation (RAG) knowledge base.
 
-**Live Demo URL:**  http://35.236.185.81/
-**Live Demo Dashboard URL:**  http://104.155.232.179/
+**Live Demo URL:**  `http://35.236.185.81/`
+
+**Live Demo Dashboard URL:**  `http://104.155.232.179/`
 
 ## 🌟 About This Project (GKE Turns 10 Hackathon)
 
