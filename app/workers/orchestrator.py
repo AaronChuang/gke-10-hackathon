@@ -1,6 +1,7 @@
 import os
 import uuid
 import logging
+from contextlib import asynccontextmanager
 
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, status
@@ -46,8 +47,25 @@ app.add_middleware(
 db = gcp_clients.get_firestore_client()
 publisher = gcp_clients.get_publisher_client()
 
-orchestrator_agent = OrchestratorAgent()
-agent_registry_service = AgentRegistryService()
+# 延遲初始化 agents，避免在模組載入時就失敗
+orchestrator_agent = None
+agent_registry_service = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global orchestrator_agent, agent_registry_service
+
+    try:
+        logger.info("Initializing agents...")
+        orchestrator_agent = OrchestratorAgent()
+        agent_registry_service = AgentRegistryService()
+        logger.info("Agents initialized successfully")
+
+        await initialize_system()
+    except Exception as e:
+        logger.error(f"Failed to initialize agents during startup: {e}")
+    yield
 
 
 async def initialize_system():
@@ -74,8 +92,7 @@ async def health_check():
 @app.post("/api/start-task", status_code=status.HTTP_202_ACCEPTED)
 async def start_task(request: TaskRequest):
     if not publisher or not db:
-        raise HTTPException(status_code=500, detail="GCP clients not initialized")
-    
+        raise HTTPException(status_code=500, detail="GCP clients not initialized")    
     try:
         # Create task in Firestore
         task_id = str(uuid.uuid4())
@@ -88,7 +105,7 @@ async def start_task(request: TaskRequest):
         }
         
         db.collection('tasks').document(task_id).set(task_data)
-
+            
         result = await orchestrator_agent.run(task_id, {"product_description": request.product_description})
         
         return {"task_id": task_id, "message": "Task started successfully", "result": result}
@@ -133,6 +150,7 @@ async def update_agent(agent_id: str, updates: dict):
 @app.delete("/api/agents/{agent_id}")
 async def delete_agent(agent_id: str):
     """Delete agent"""
+    check_services_initialized()
     try:
         success = await agent_registry_service.delete_agent(agent_id)
         if not success:

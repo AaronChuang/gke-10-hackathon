@@ -1,6 +1,7 @@
 from crewai import Agent, Task
 from typing import Dict, Any, Optional
 from enum import Enum
+import os
 
 from langchain_google_vertexai import ChatVertexAI
 
@@ -9,6 +10,9 @@ from app.shared_crew_lib.schemas.agent_output import AgentResponse
 from app.shared_crew_lib.services.agent_deployment_service import AgentDeploymentService, AgentInfo
 from app.shared_crew_lib.services.agent_communication_service import AgentCommunicationService
 from app.shared_crew_lib.services.agent_initialization_service import AgentInitializationService
+from app.shared_crew_lib.services.rag_service import RAGService
+from app.shared_crew_lib.tools.rag_tool import RAGKnowledgeSearchTool
+from app.shared_crew_lib.clients import gcp_clients
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,6 +35,17 @@ class OrchestratorAgent(BaseAgentWrapper):
     """Orchestrator Agent - Responsible for intent recognition and task routing"""
     
     def __init__(self, task_id: str = None):
+        # Initialize RAG service with error handling
+        self.rag_service = None
+        try:
+            project_id = os.getenv("GCP_PROJECT_ID")
+            location = "us-central1"  # 與 crawler-service 保持一致
+            db = gcp_clients.get_firestore_client()
+            self.rag_service = RAGService(project_id=project_id, location=location, db=db)
+            print("OrchestratorAgent: RAG service initialized successfully")
+        except Exception as e:
+            print(f"OrchestratorAgent: Warning - Failed to initialize RAG service: {e}")
+        
         super().__init__("orchestrator-agent", task_id)
         self.deployment_service = AgentDeploymentService()
         self.communication_service = AgentCommunicationService()
@@ -49,7 +64,7 @@ class OrchestratorAgent(BaseAgentWrapper):
     def get_llm(self, project_id) -> ChatVertexAI:
         return ChatVertexAI(
             project=project_id,
-            model_name="gemini-2.5-flash-lite",
+            model_name="gemini-2.5-pro",
             temperature=0.7,
             max_output_tokens=4096,
             top_p=0.95,
@@ -58,15 +73,39 @@ class OrchestratorAgent(BaseAgentWrapper):
         )
 
     def create_agent(self) -> Agent:
-        """Create orchestrator agent instance"""
+        """Create orchestrator agent instance with RAG tools"""
         # Use base class structured prompt assembly method
         system_prompt = self._assemble_prompt_context()
+        
+        # Create RAG tool for knowledge base access
+        tools = []
+        if self.rag_service:
+            try:
+                # 嘗試從環境變數或使用默認值獲取知識庫配置
+                kb_id = os.getenv("RAG_KB_ID", "kb_35_236_185_81_1758461188")
+                endpoint_name = os.getenv("RAG_ENDPOINT_NAME", f"{kb_id.replace('_', '-')}-endpoint")
+                deployed_index_id = os.getenv("RAG_DEPLOYED_INDEX_ID", f"deployed_{kb_id}")
+                
+                rag_tool = RAGKnowledgeSearchTool(
+                    rag_service=self.rag_service,
+                    kb_id=kb_id,
+                    index_endpoint_name=endpoint_name,
+                    deployed_index_id=deployed_index_id
+                )
+                tools.append(rag_tool)
+                print(f"Orchestrator Agent: Successfully initialized RAG tool with kb_id: {kb_id}")
+            except Exception as e:
+                # 如果 RAG 工具初始化失敗，記錄錯誤但繼續創建 agent
+                print(f"Orchestrator Agent: Warning - Failed to initialize RAG tool: {e}")
+        else:
+            print("Orchestrator Agent: RAG service not available, skipping RAG tool initialization")
         
         return Agent(
             role="Intelligent Task Coordinator and Agent Manager",
             goal="Accurately identify user intent, intelligently route tasks, and manage agent lifecycle",
             backstory=system_prompt,
             llm=self.llm,
+            tools=tools,
             allow_delegation=False,
             verbose=True
         )

@@ -1,15 +1,25 @@
 from crewai import Agent, Task
 from typing import Dict, Any
+import os
 
 from langchain_google_vertexai import ChatVertexAI
 
 from .base import BaseAgentWrapper
+from app.shared_crew_lib.services.rag_service import RAGService
+from app.shared_crew_lib.tools.rag_tool import RAGKnowledgeSearchTool
+from app.shared_crew_lib.clients import gcp_clients
 
 
 class ProxyAgent(BaseAgentWrapper):
     """Customer Service Agent - Handles general customer inquiries and forwards specialized requests"""
     
     def __init__(self, task_id: str = None):
+        # Initialize RAG service
+        project_id = os.getenv("GCP_PROJECT_ID")
+        location = "us-central1"  # 與 crawler-service 保持一致
+        db = gcp_clients.get_firestore_client()
+        self.rag_service = RAGService(project_id=project_id, location=location, db=db)
+        
         super().__init__("proxy-agent", task_id)
 
     def get_llm(self, project_id) -> ChatVertexAI:
@@ -24,14 +34,35 @@ class ProxyAgent(BaseAgentWrapper):
         )
 
     def create_agent(self) -> Agent:
-        """Create proxy agent instance"""
+        """Create proxy agent instance with RAG tools"""
         system_prompt = self._assemble_prompt_context()
+
+        # Create RAG tool for knowledge base access
+        tools = []
+        try:
+            # 嘗試從環境變數或使用默認值獲取知識庫配置
+            kb_id = os.getenv("RAG_KB_ID", "kb_35_236_185_81_1758459342")
+            endpoint_name = os.getenv("RAG_ENDPOINT_NAME", f"{kb_id.replace('_', '-')}-endpoint")
+            deployed_index_id = os.getenv("RAG_DEPLOYED_INDEX_ID", f"deployed_{kb_id}")
+            
+            rag_tool = RAGKnowledgeSearchTool(
+                rag_service=self.rag_service,
+                kb_id=kb_id,
+                index_endpoint_name=endpoint_name,
+                deployed_index_id=deployed_index_id
+            )
+            tools.append(rag_tool)
+            print(f"Proxy Agent: Successfully initialized RAG tool with kb_id: {kb_id}")
+        except Exception as e:
+            # 如果 RAG 工具初始化失敗，記錄錯誤但繼續創建 agent
+            print(f"Proxy Agent: Warning - Failed to initialize RAG tool: {e}")
 
         return Agent(
             role="Customer Service Agent for 'Online Boutique'",
             goal="Serve as the primary contact for 'Online Boutique' users. You must correctly handle user queries by answering, rejecting, or forwarding them according to strict rules.",
             backstory=system_prompt,
             llm=self.llm,
+            tools=tools,
             allow_delegation=False,
             reasoning=False
         )

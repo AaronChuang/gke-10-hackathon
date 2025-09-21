@@ -1,10 +1,14 @@
 from crewai import Agent, Task
 from typing import Dict, Any
+import os
 
 from langchain_google_vertexai import ChatVertexAI
 
 from .base import BaseAgentWrapper
 from app.shared_crew_lib.schemas.agent_output import AgentResponse
+from app.shared_crew_lib.services.rag_service import RAGService
+from app.shared_crew_lib.tools.rag_tool import RAGKnowledgeSearchTool
+from app.shared_crew_lib.clients import gcp_clients
 
 
 class OmniAgent(BaseAgentWrapper):
@@ -15,7 +19,33 @@ class OmniAgent(BaseAgentWrapper):
         self.custom_role = custom_role
         self.custom_goal = custom_goal
         self.custom_backstory = custom_backstory
+        
+        # Initialize RAG service
+        project_id = os.getenv("GCP_PROJECT_ID")
+        location = "us-central1"  # 與 crawler-service 保持一致
+        db = gcp_clients.get_firestore_client()
+        self.rag_service = RAGService(project_id=project_id, location=location, db=db)
+        
         super().__init__("omni-agent", task_id)
+    
+    async def _get_active_knowledge_base(self):
+        """獲取可用的知識庫配置"""
+        try:
+            # 查詢 Firestore 中狀態為 ACTIVE 的知識庫
+            kb_collection = self.rag_service.db.collection("knowledge_base")
+            docs = kb_collection.where("status", "==", "ACTIVE").limit(1).stream()
+            
+            async for doc in docs:
+                kb_data = doc.to_dict()
+                return {
+                    "kb_id": doc.id,
+                    "endpoint_name": f"{doc.id.replace('_', '-')}-endpoint",
+                    "deployed_index_id": f"deployed_{doc.id}"
+                }
+            return None
+        except Exception as e:
+            print(f"Error getting active knowledge base: {e}")
+            return None
 
 
     def get_llm(self, project_id) -> ChatVertexAI:
@@ -30,7 +60,7 @@ class OmniAgent(BaseAgentWrapper):
         )
 
     def create_agent(self) -> Agent:
-        """Create configurable omni agent instance"""
+        """Create configurable omni agent instance with RAG tools"""
         # If custom configuration exists, use custom backstory; otherwise use structured prompt
         if self.custom_backstory:
             backstory = self.custom_backstory
@@ -41,11 +71,32 @@ class OmniAgent(BaseAgentWrapper):
         role = self.custom_role or "Omni Intelligence Assistant"
         goal = self.custom_goal or "Provide professional and accurate assistance based on user needs"
         
+        # Create RAG tool - 使用已建立的知識庫
+        tools = []
+        try:
+            # 嘗試從環境變數或使用默認值獲取知識庫配置
+            kb_id = os.getenv("RAG_KB_ID", "kb_35_236_185_81_1758459342")
+            endpoint_name = os.getenv("RAG_ENDPOINT_NAME", f"{kb_id.replace('_', '-')}-endpoint")
+            deployed_index_id = os.getenv("RAG_DEPLOYED_INDEX_ID", f"deployed_{kb_id}")
+            
+            rag_tool = RAGKnowledgeSearchTool(
+                rag_service=self.rag_service,
+                kb_id=kb_id,
+                index_endpoint_name=endpoint_name,
+                deployed_index_id=deployed_index_id
+            )
+            tools.append(rag_tool)
+            print(f"Successfully initialized RAG tool with kb_id: {kb_id}")
+        except Exception as e:
+            # 如果 RAG 工具初始化失敗，記錄錯誤但繼續創建 agent
+            print(f"Warning: Failed to initialize RAG tool: {e}")
+        
         return Agent(
             role=role,
             goal=goal,
             backstory=backstory,
             llm=self.llm,
+            tools=tools,
             allow_delegation=False,
             verbose=True
         )

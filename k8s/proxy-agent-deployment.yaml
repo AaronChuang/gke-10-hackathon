@@ -53,6 +53,21 @@ spec:
               value: "rag-index"
             - name: PYTHONPATH
               value: "/code"
+            - name: RAG_KB_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: rag-config
+                  key: RAG_KB_ID
+            - name: RAG_ENDPOINT_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: rag-config
+                  key: RAG_ENDPOINT_NAME
+            - name: RAG_DEPLOYED_INDEX_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: rag-config
+                  key: RAG_DEPLOYED_INDEX_ID
           workingDir: /code
 
 ---

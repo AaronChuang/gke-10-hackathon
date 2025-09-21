@@ -193,8 +193,9 @@ Apply the Kubernetes manifests in the `k8s/` directory. The recommended order en
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/ksa.yaml
 
-# 2. Backend Configurations
+# 2. Backend Configurations and ConfigMaps
 kubectl apply -f k8s/backend-config.yaml
+kubectl apply -f k8s/rag-config.yaml
 
 # 3. Deployments
 kubectl apply -f k8s/orchestrator-deployment.yaml

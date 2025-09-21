@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rag-config
+  namespace: ai-agents
+data:
+  RAG_KB_ID: "kb_35_236_185_81_1758461188"
+  RAG_ENDPOINT_NAME: "kb-35-236-185-81-1758461188-endpoint"
+  RAG_DEPLOYED_INDEX_ID: "deployed_kb_35_236_185_81_1758461188"

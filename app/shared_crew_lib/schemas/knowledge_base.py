@@ -44,4 +44,3 @@ class RAGQueryResponse(BaseModel):
     results: List[RAGQueryResult] = Field(default_factory=list)
     total_results: int = Field(default=0)
     query_time_ms: float = Field(default=0.0)
-ㄋ

@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 from crewai.tools import BaseTool
 
@@ -17,7 +18,19 @@ class RAGKnowledgeSearchTool(BaseTool):
     index_endpoint_name: str
     deployed_index_id: str
 
-    async def _run(self, query: str) -> str:
+    def _run(self, query: str) -> str:
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                return loop.run_until_complete(self._async_run(query))
+            finally:
+                loop.close()
+        except Exception as e:
+            logging.error(f"Error during RAG tool execution: {e}")
+            return "An error occurred while searching the knowledge base."
+    
+    async def _async_run(self, query: str) -> str:
         try:
             neighbor_results = await self.rag_service.query(
                 query_text=query,
@@ -43,5 +56,5 @@ class RAGKnowledgeSearchTool(BaseTool):
             return "\n\n---\n\n".join(context_parts)
 
         except Exception as e:
-            logging.error(f"Error during RAG tool execution: {e}")
+            logging.error(f"Error during async RAG tool execution: {e}")
             return "An error occurred while searching the knowledge base."
