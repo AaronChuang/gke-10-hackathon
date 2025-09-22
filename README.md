@@ -11,6 +11,13 @@ A dynamic, manageable AI agent ecosystem built on Google Cloud for the GKE Turns
 
 **Live Demo Dashboard URL:**  `http://104.155.232.179/`
 
+## 🚨 Demo Availability Notice
+
+> [!WARNING]
+> **Demo Availability Notice**
+> 
+> This live demo is hosted for the **GKE Turns 10 Hackathon**. It will be taken down after **October 1, 2025**, to conserve cloud resources. Thank you for your understanding!
+
 ## 🌟 About This Project (GKE Turns 10 Hackathon)
 
 This project was created for the **GKE Turns 10 Hackathon** (September 12 - September 22, 2025). Our goal was to enhance the **Online Boutique** sample application with Agentic AI capabilities without modifying its core source code. We achieved this by building an independent, injectable JavaScript widget powered by a robust, GKE-hosted AI microservices backend.

@@ -16,9 +16,9 @@ class ProxyAgent(BaseAgentWrapper):
     def __init__(self, task_id: str = None):
         # Initialize RAG service
         project_id = os.getenv("GCP_PROJECT_ID")
-        location = "us-central1"  # 與 crawler-service 保持一致
-        db = gcp_clients.get_firestore_client()
-        self.rag_service = RAGService(project_id=project_id, location=location, db=db)
+        location = "us-central1"
+        async_db = gcp_clients.get_async_firestore_client()
+        self.rag_service = RAGService(project_id=project_id, location=location, db=async_db)
         
         super().__init__("proxy-agent", task_id)
 
@@ -26,10 +26,8 @@ class ProxyAgent(BaseAgentWrapper):
         return ChatVertexAI(
             project=project_id,
             model_name="gemini-2.5-flash-lite",
-            temperature=0.7,
+            temperature=0.2,
             max_output_tokens=4096,
-            top_p=0.95,
-            top_k=40,
             convert_system_message_to_human=True
         )
 
@@ -40,7 +38,6 @@ class ProxyAgent(BaseAgentWrapper):
         # Create RAG tool for knowledge base access
         tools = []
         try:
-            # 嘗試從環境變數或使用默認值獲取知識庫配置
             kb_id = os.getenv("RAG_KB_ID", "kb_35_236_185_81_1758459342")
             endpoint_name = os.getenv("RAG_ENDPOINT_NAME", f"{kb_id.replace('_', '-')}-endpoint")
             deployed_index_id = os.getenv("RAG_DEPLOYED_INDEX_ID", f"deployed_{kb_id}")
@@ -54,17 +51,18 @@ class ProxyAgent(BaseAgentWrapper):
             tools.append(rag_tool)
             print(f"Proxy Agent: Successfully initialized RAG tool with kb_id: {kb_id}")
         except Exception as e:
-            # 如果 RAG 工具初始化失敗，記錄錯誤但繼續創建 agent
             print(f"Proxy Agent: Warning - Failed to initialize RAG tool: {e}")
 
         return Agent(
             role="Customer Service Agent for 'Online Boutique'",
-            goal="Serve as the primary contact for 'Online Boutique' users. You must correctly handle user queries by answering, rejecting, or forwarding them according to strict rules.",
+            goal="Serve as the primary contact for 'Online Boutique' users. Try to use the Knowledge Base Search tool when possible, but if it fails, provide helpful responses based on general e-commerce knowledge. Always follow the decision-making process to answer, reject, or forward queries appropriately.",
             backstory=system_prompt,
             llm=self.llm,
             tools=tools,
+            verbose=True,
             allow_delegation=False,
-            reasoning=False
+            max_iter=3,  # Reduce max iterations to prevent infinite loops
+            max_execution_time=20  # Reduce execution time
         )
 
     def create_task(self, input_data: Dict[str, Any]) -> Task:
@@ -85,7 +83,8 @@ class ProxyAgent(BaseAgentWrapper):
         context = "\n".join(context_parts)
 
         task_description = f"""
-        Analyze the user's request based on the provided context and follow a strict decision-making process. Your domain of expertise is ONLY the 'Online Boutique' e-commerce store.
+        Analyze the user's request based on the provided context and follow the strict decision-making process below. Your domain of expertise is ONLY the 'Online Boutique' e-commerce store. 
+        When you need information, you MUST use the 'Knowledge Base Search' tool.
 
         --- CONTEXT ---
         {context}
@@ -95,16 +94,18 @@ class ProxyAgent(BaseAgentWrapper):
         2. The "action" field MUST be one of "RESPOND", "FORWARD", or "REJECT".
         3. Your thought process MUST be captured inside the "thought" key of the JSON. Do NOT output your thoughts as plain text.
 
-        --- DECISION-MAKING PROCESS (Follow these steps in order) ---
-        1.  **Relevance Check**: Is the query related to 'Online Boutique'? If NO, action MUST be "REJECT".
-        2.  **Specialist Check**: If relevant, is it for a specialist (finance, styling)? If YES, action MUST be "FORWARD".
-        3.  **General Inquiry**: If relevant and not for a specialist, action MUST be "RESPOND".
+         --- DECISION-MAKING PROCESS (Follow these steps in order) ---
+        1. **Relevance Check**: Is the query related to 'Online Boutique'? If NO, action MUST be "REJECT".
+        2. **Information Retrieval**: If relevant, try to use the 'Knowledge Base Search' tool with a clear, concise query to find relevant information. If the tool fails or returns an error, proceed with general knowledge.
+        3. **Specialist Check**: Based on the user's query and any retrieved information, does this request require a specialist (e.g., a multi-step styling plan)? If YES, action MUST be "FORWARD".
+        4. **General Inquiry**: If you have sufficient information (from knowledge base or general knowledge) to answer the question and it's not for a specialist, action MUST be "RESPOND".
+        5. **Tool Failure Handling**: If the Knowledge Base Search tool fails repeatedly, provide a helpful response based on general e-commerce knowledge and apologize for not being able to access specific product details.
 
         --- RESPONSE FORMAT & EXAMPLES ---
 
         Example 1: General E-commerce Question
         <result>{{
-            "thought": "Step 1: User asks about sunglasses. Step 2: This is relevant to our store. Step 3: This is a general question I can answer. Action is RESPOND.",
+            "thought": "Step 1: User asks about sunglasses. Step 2: This is relevant to our store. Step 3: I used Knowledge Base Search to find information about sunglasses. Step 4: I have sufficient information to answer. Action is RESPOND.",
             "action": "RESPOND",
             "response_content": "Yes, we have a wide variety of sunglasses available in our 'Accessories' section!",
             "forward_to_agent": null
@@ -112,7 +113,7 @@ class ProxyAgent(BaseAgentWrapper):
 
         Example 2: Specialist Question (Forwarding)
         <result>{{
-            "thought": "Step 1: User asks for personalized style advice. Step 2: This is relevant. Step 3: This requires a specialist. Action is FORWARD to stylist-agent.",
+            "thought": "Step 1: User asks for personalized style advice. Step 2: This is relevant. Step 3: I searched the knowledge base for styling information. Step 4: This requires a specialist for personalized advice. Action is FORWARD to stylist-agent.",
             "action": "FORWARD",
             "response_content": "That's a great question! I'm forwarding you to our style specialist who can give you the best advice. They will get back to you shortly.",
             "forward_to_agent": "stylist-agent"
@@ -123,6 +124,14 @@ class ProxyAgent(BaseAgentWrapper):
             "thought": "Step 1: User asks a math question '1+2=?'. Step 2: This is NOT relevant to our store. Step 3: Action is REJECT.",
             "action": "REJECT",
             "response_content": "I'm sorry, but I can only assist with questions related to our Online Boutique store and products.",
+            "forward_to_agent": null
+        }}</result>
+
+        Example 4: Tool Failure Handling
+        <result>{{
+            "thought": "Step 1: User asks about hairdryer settings. Step 2: This is relevant to our store. Step 3: I tried Knowledge Base Search but it failed. Step 4: I'll provide general information and apologize. Action is RESPOND.",
+            "action": "RESPOND",
+            "response_content": "I apologize, but I'm currently unable to access our detailed product database. For specific hairdryer settings and features, I recommend checking the product page directly or contacting our customer service team who can provide detailed specifications.",
             "forward_to_agent": null
         }}</result>
 

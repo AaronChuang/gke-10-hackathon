@@ -40,8 +40,8 @@ class OrchestratorAgent(BaseAgentWrapper):
         try:
             project_id = os.getenv("GCP_PROJECT_ID")
             location = "us-central1"  # 與 crawler-service 保持一致
-            db = gcp_clients.get_firestore_client()
-            self.rag_service = RAGService(project_id=project_id, location=location, db=db)
+            async_db = gcp_clients.get_async_firestore_client()
+            self.rag_service = RAGService(project_id=project_id, location=location, db=async_db)
             print("OrchestratorAgent: RAG service initialized successfully")
         except Exception as e:
             print(f"OrchestratorAgent: Warning - Failed to initialize RAG service: {e}")

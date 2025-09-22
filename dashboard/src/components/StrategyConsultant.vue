@@ -157,7 +157,7 @@ const sendMessage = async () => {
     })
 
     if (!response.ok) {
-      throw new Error('網路請求失敗')
+      throw new Error(t('strategy.errors.networkError'))
     }
 
     const data = await response.json()
@@ -165,17 +165,17 @@ const sendMessage = async () => {
     const aiMessage: Message = {
       id: (Date.now() + 1).toString(),
       sender: 'ai',
-      content: data.agent_response || '抱歉，我現在無法提供建議，請稍後再試。',
+      content: data.agent_response || t('strategy.errors.noResponse'),
       timestamp: new Date()
     }
 
     messages.value.push(aiMessage)
   } catch (error) {
-    console.error('發送消息失敗:', error)
+    console.error(t('strategy.errors.sendFailed'), error)
     const errorMessage: Message = {
       id: (Date.now() + 1).toString(),
       sender: 'ai',
-      content: '抱歉，我現在無法回應您的問題。請檢查網路連接或稍後再試。',
+      content: t('strategy.errors.connectionError'),
       timestamp: new Date()
     }
     messages.value.push(errorMessage)
@@ -193,7 +193,8 @@ const scrollToBottom = async () => {
 }
 
 const formatTime = (date: Date) => {
-  return date.toLocaleTimeString('zh-TW', { 
+  const locale = t('common.locale') === 'zh-TW' ? 'zh-TW' : 'en-US'
+  return date.toLocaleTimeString(locale, { 
     hour: '2-digit', 
     minute: '2-digit' 
   })

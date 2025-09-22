@@ -10,9 +10,10 @@ GCP_FIRESTORE_NAME = os.getenv("GCP_FIRESTORE_NAME")
 publisher = None
 subscriber = None
 db = None
+async_db = None
 
 def initialize_gcp_clients():
-    global publisher, subscriber, db
+    global publisher, subscriber, db, async_db
     
     if not PROJECT_ID:
         error_msg = "GCP_PROJECT_ID environment variable is required but not set"
@@ -29,9 +30,11 @@ def initialize_gcp_clients():
         if GCP_FIRESTORE_NAME:
             logger.info(f"Using Firestore database: {GCP_FIRESTORE_NAME}")
             db = firestore.Client(project=PROJECT_ID, database=GCP_FIRESTORE_NAME)
+            async_db = firestore.AsyncClient(project=PROJECT_ID, database=GCP_FIRESTORE_NAME)
         else:
             logger.info("Using default Firestore database")
             db = firestore.Client(project=PROJECT_ID)
+            async_db = firestore.AsyncClient(project=PROJECT_ID)
         
         try:
             collections = list(db.collections())
@@ -53,6 +56,12 @@ def get_firestore_client():
         logger.warning("Firestore client not initialized, attempting to initialize...")
         initialize_gcp_clients()
     return db
+
+def get_async_firestore_client():
+    if async_db is None:
+        logger.warning("Async Firestore client not initialized, attempting to initialize...")
+        initialize_gcp_clients()
+    return async_db
 
 def get_publisher_client():
     if publisher is None:

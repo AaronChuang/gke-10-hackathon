@@ -50,8 +50,6 @@
         
         <KnowledgeBase 
           v-else-if="activeTab === 'knowledge'"
-          :knowledge-entries="[]"
-          @refresh="() => {}"
         />
         
         <OperationsCenter 

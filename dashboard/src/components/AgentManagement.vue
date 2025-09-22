@@ -12,6 +12,54 @@
       </button>
     </div>
 
+    <!-- 功能開發中警示區塊 -->
+    <div class="development-notice">
+      <div class="notice-header">
+        <i class="fas fa-construction"></i>
+        <h3>{{ $t('agents.developmentNotice.title') }}</h3>
+      </div>
+      <div class="notice-content">
+        <p class="notice-intro">{{ $t('agents.developmentNotice.intro') }}</p>
+        <div class="features-list">
+          <div class="feature-item">
+            <i class="fas fa-robot"></i>
+            <div class="feature-content">
+              <h4>{{ $t('agents.developmentNotice.features.onboarding.title') }}</h4>
+              <p>{{ $t('agents.developmentNotice.features.onboarding.description') }}</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <i class="fas fa-rocket"></i>
+            <div class="feature-content">
+              <h4>{{ $t('agents.developmentNotice.features.provisioning.title') }}</h4>
+              <p>{{ $t('agents.developmentNotice.features.provisioning.description') }}</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <i class="fas fa-broadcast-tower"></i>
+            <div class="feature-content">
+              <h4>{{ $t('agents.developmentNotice.features.registration.title') }}</h4>
+              <p>{{ $t('agents.developmentNotice.features.registration.description') }}</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <i class="fas fa-handshake"></i>
+            <div class="feature-content">
+              <h4>{{ $t('agents.developmentNotice.features.delegation.title') }}</h4>
+              <p>{{ $t('agents.developmentNotice.features.delegation.description') }}</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <i class="fas fa-shield-alt"></i>
+            <div class="feature-content">
+              <h4>{{ $t('agents.developmentNotice.features.guardrails.title') }}</h4>
+              <p>{{ $t('agents.developmentNotice.features.guardrails.description') }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="stats-overview">
       <div class="stat-card">
         <div class="stat-value">{{ totalAgents }}</div>
@@ -97,33 +145,10 @@
                 <button 
                   @click="viewAgentDetails(agent)" 
                   class="action-btn view-btn"
-                  title="查看詳情"
+                  :title="$t('agents.actions.viewDetails')"
                 >
                   <i class="fas fa-eye"></i>
-                </button>
-                <button 
-                  @click="editAgent(agent)" 
-                  :disabled="agent.status === 'CREATING'"
-                  class="action-btn edit-btn"
-                  title="編輯"
-                >
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button 
-                  @click="toggleAgentStatus(agent)" 
-                  :disabled="agent.status === 'CREATING' || isSystemAgent(agent.name)"
-                  :class="['action-btn', agent.status === 'ACTIVE' ? 'deactivate-btn' : 'activate-btn']"
-                  :title="agent.status === 'ACTIVE' ? '停用' : '啟用'"
-                >
-                  <i :class="agent.status === 'ACTIVE' ? 'fas fa-pause' : 'fas fa-play'"></i>
-                </button>
-                <button 
-                  @click="deleteAgent(agent)" 
-                  :disabled="agent.status === 'CREATING' || isSystemAgent(agent.name)"
-                  class="action-btn delete-btn"
-                  title="刪除"
-                >
-                  <i class="fas fa-trash"></i>
+                  {{ $t('agents.actions.viewDetails') }}
                 </button>
               </td>
             </tr>
@@ -134,42 +159,42 @@
     <div v-if="showCreateModal" class="modal-overlay" @click="closeCreateModal">
       <div class="modal-content large-modal" @click.stop>
         <div class="modal-header">
-          <h3>創建新代理人</h3>
+          <h3>{{ $t('agents.create.title') }}</h3>
           <button @click="closeCreateModal" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
           <form @submit.prevent="submitCreateAgent">
             <div class="form-row">
               <div class="form-group">
-                <label for="agent-name">代理人名稱 *</label>
+                <label for="agent-name">{{ $t('agents.create.name') }} *</label>
                 <input 
                   id="agent-name"
                   v-model="createForm.name" 
                   type="text" 
-                  placeholder="例如：MarketingAgent"
+                  :placeholder="$t('agents.create.namePlaceholder')"
                   required
                   class="form-input"
                 />
               </div>
               <div class="form-group">
-                <label for="pubsub-topic">Pub/Sub 主題</label>
+                <label for="pubsub-topic">{{ $t('agents.create.pubsubTopic') }}</label>
                 <input 
                   id="pubsub-topic"
                   v-model="createForm.pubsub_topic" 
                   type="text" 
-                  placeholder="例如：marketing-agent-topic"
+                  :placeholder="$t('agents.create.pubsubTopicPlaceholder')"
                   class="form-input"
                 />
-                <small class="form-help">留空將自動生成</small>
+                <small class="form-help">{{ $t('agents.create.pubsubTopicHelp') }}</small>
               </div>
             </div>
 
             <div class="form-group">
-              <label for="agent-description">描述 *</label>
+              <label for="agent-description">{{ $t('agents.create.description') }} *</label>
               <textarea 
                 id="agent-description"
                 v-model="createForm.description" 
-                placeholder="描述代理人的主要功能和用途..."
+                :placeholder="$t('agents.create.descriptionPlaceholder')"
                 required
                 class="form-textarea"
                 rows="3"
@@ -177,7 +202,7 @@
             </div>
 
             <div class="form-group">
-              <label for="capabilities">能力標籤</label>
+              <label for="capabilities">{{ $t('agents.create.capabilities') }}</label>
               <div class="capabilities-input">
                 <div class="selected-capabilities">
                   <span 
@@ -196,7 +221,7 @@
                     v-model="newCapability"
                     @keydown.enter.prevent="addCapability"
                     type="text" 
-                    placeholder="輸入能力標籤後按 Enter"
+                    :placeholder="$t('agents.create.capabilityPlaceholder')"
                     class="capability-input"
                   />
                   <button type="button" @click="addCapability" class="add-capability-btn">
@@ -204,30 +229,99 @@
                   </button>
                 </div>
               </div>
-              <small class="form-help">例如：文案撰寫、市場分析、數據處理等</small>
+              <small class="form-help">{{ $t('agents.create.capabilityHelp') }}</small>
             </div>
 
             <div class="form-group">
-              <label for="system-prompt">系統提示詞 *</label>
+              <label for="system-prompt">{{ $t('agents.create.systemPrompt') }} *</label>
               <textarea 
                 id="system-prompt"
                 v-model="createForm.system_prompt" 
-                placeholder="定義代理人的角色、行為和回應風格..."
+                :placeholder="$t('agents.create.systemPromptPlaceholder')"
                 required
                 class="form-textarea"
                 rows="8"
               ></textarea>
-              <small class="form-help">這將決定代理人的個性和專業領域</small>
+              <small class="form-help">{{ $t('agents.create.systemPromptHelp') }}</small>
             </div>
 
             <div class="form-actions">
-              <button type="button" @click="closeCreateModal" class="cancel-btn">取消</button>
+              <button type="button" @click="closeCreateModal" class="cancel-btn">{{ $t('common.cancel') }}</button>
               <button type="submit" :disabled="submitting" class="submit-btn">
                 <i v-if="submitting" class="fas fa-spinner fa-spin"></i>
-                {{ submitting ? '創建中...' : '創建代理人' }}
+                {{ submitting ? $t('agents.create.creating') : $t('agents.create.submit') }}
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 代理人詳情模態框 -->
+    <div v-if="selectedAgent" class="modal-overlay" @click="closeDetailsModal">
+      <div class="modal-content large-modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ $t('agents.details.title') }} - {{ getDisplayName(selectedAgent.name) }}</h3>
+          <button @click="closeDetailsModal" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="agent-details">
+            <div class="detail-section">
+              <h4>{{ $t('agents.details.basicInfo') }}</h4>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <label>{{ $t('agents.details.name') }}</label>
+                  <div class="detail-value">
+                    <i class="fas fa-robot agent-icon"></i>
+                    <span>{{ getDisplayName(selectedAgent.name) }}</span>
+                    <span v-if="isSystemAgent(selectedAgent.name)" class="system-badge">{{ $t('common.system') }}</span>
+                  </div>
+                </div>
+                <div class="detail-item">
+                  <label>{{ $t('agents.details.status') }}</label>
+                  <span :class="['status-badge', getStatusClass(selectedAgent.status)]">
+                    {{ getStatusText(selectedAgent.status) }}
+                  </span>
+                </div>
+                <div class="detail-item">
+                  <label>{{ $t('agents.details.created') }}</label>
+                  <span>{{ formatTime(selectedAgent.created_at) }}</span>
+                </div>
+                <div class="detail-item">
+                  <label>{{ $t('agents.details.pubsubTopic') }}</label>
+                  <code class="topic-code">{{ selectedAgent.pubsub_topic || '-' }}</code>
+                </div>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h4>{{ $t('agents.details.description') }}</h4>
+              <div class="description-content">
+                {{ selectedAgent.description }}
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h4>{{ $t('agents.details.capabilities') }}</h4>
+              <div class="capabilities-list">
+                <span 
+                  v-for="capability in selectedAgent.capabilities" 
+                  :key="capability"
+                  class="capability-tag"
+                >
+                  {{ capability }}
+                </span>
+              </div>
+            </div>
+
+            <div v-if="selectedAgent.system_prompt" class="detail-section">
+              <h4>{{ $t('agents.details.systemPrompt') }}</h4>
+              <div class="system-prompt-content">
+                <pre>{{ selectedAgent.system_prompt }}</pre>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
     </div>
@@ -251,6 +345,7 @@ const emit = defineEmits<{
 
 const statusFilter = ref('')
 const showCreateModal = ref(false)
+const selectedAgent = ref<Agent | null>(null)
 const submitting = ref(false)
 const newCapability = ref('')
 
@@ -320,70 +415,11 @@ const formatTime = (timestamp: number) => {
 
 // Agent operation functions
 const viewAgentDetails = (agent: Agent) => {
-  // 顯示代理人詳情模態框
-  alert(`代理人詳情：\n名稱：${agent.name}\n描述：${agent.description}\n狀態：${agent.status}\n能力：${agent.capabilities.join(', ')}\n創建時間：${formatTime(agent.created_at)}`)
+  selectedAgent.value = agent
 }
 
-const editAgent = (agent: Agent) => {
-  // 填充編輯表單
-  createForm.value = {
-    name: agent.name,
-    description: agent.description,
-    system_prompt: agent.system_prompt,
-    capabilities: [...agent.capabilities],
-    pubsub_topic: agent.pubsub_topic
-  }
-  showCreateModal.value = true
-}
-
-const toggleAgentStatus = async (agent: Agent) => {
-  const newStatus = agent.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
-  const action = newStatus === 'ACTIVE' ? '啟用' : '停用'
-  
-  if (confirm(`確定要${action}代理人 ${agent.name} 嗎？`)) {
-    try {
-      const response = await fetch(`/api/agents/${agent.agent_id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus })
-      })
-
-      if (response.ok) {
-        emit('refresh')
-      } else {
-        const error = await response.json()
-        alert(`${action}失敗: ${error.detail || '未知錯誤'}`)
-      }
-    } catch (error) {
-      alert(`${action}失敗: ${error}`)
-    }
-  }
-}
-
-const deleteAgent = async (agent: Agent) => {
-  if (isSystemAgent(agent.name)) {
-    alert('Cannot delete system agents')
-    return
-  }
-
-  if (confirm(`確定要刪除代理人 ${agent.name} 嗎？此操作無法復原。`)) {
-    try {
-      const response = await fetch(`/api/agents/${agent.agent_id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        emit('refresh')
-      } else {
-        const error = await response.json()
-        alert(`刪除失敗: ${error.detail || '未知錯誤'}`)
-      }
-    } catch (error) {
-      alert(`刪除失敗: ${error}`)
-    }
-  }
+const closeDetailsModal = () => {
+  selectedAgent.value = null
 }
 
 // 創建代理人相關函數
@@ -449,6 +485,89 @@ const submitCreateAgent = async () => {
 <style lang="scss" scoped>
 .agent-management {
   padding: $spacing-lg;
+}
+
+// 功能開發中警示區塊樣式
+.development-notice {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border: 2px solid #ef4444;
+  border-radius: 12px;
+  padding: $spacing-xl;
+  margin-bottom: $spacing-xl;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+
+  .notice-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    margin-bottom: $spacing-lg;
+
+    i {
+      font-size: 1.5rem;
+      color: #dc2626;
+      animation: pulse 2s infinite;
+    }
+
+    h3 {
+      margin: 0;
+      color: #dc2626;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+  }
+
+  .notice-content {
+    .notice-intro {
+      color: #7f1d1d;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: $spacing-lg;
+      font-weight: 500;
+    }
+
+    .features-list {
+      display: grid;
+      gap: $spacing-lg;
+
+      .feature-item {
+        display: flex;
+        gap: $spacing-md;
+        align-items: flex-start;
+        background: rgba(255, 255, 255, 0.7);
+        padding: $spacing-md;
+        border-radius: 8px;
+        border-left: 4px solid #dc2626;
+
+        i {
+          font-size: 1.2rem;
+          color: #dc2626;
+          margin-top: 2px;
+          flex-shrink: 0;
+        }
+
+        .feature-content {
+          h4 {
+            margin: 0 0 $spacing-sm 0;
+            color: #991b1b;
+            font-size: 0.95rem;
+            font-weight: 600;
+          }
+
+          p {
+            margin: 0;
+            color: #7f1d1d;
+            font-size: 0.875rem;
+            line-height: 1.5;
+          }
+        }
+      }
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 .agent-header {
@@ -990,6 +1109,106 @@ const submitCreateAgent = async () => {
     
     &:hover:not(:disabled) {
       background-color: #2563eb;
+    }
+  }
+}
+
+// 代理人詳情樣式
+.agent-details {
+  .detail-section {
+    margin-bottom: $spacing-xl;
+    
+    h4 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: $text-primary;
+      margin-bottom: $spacing-md;
+      padding-bottom: $spacing-sm;
+      border-bottom: 2px solid #e5e7eb;
+    }
+  }
+  
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: $spacing-md;
+    
+    .detail-item {
+      label {
+        display: block;
+        font-weight: 600;
+        color: $text-secondary;
+        margin-bottom: $spacing-xs;
+        font-size: 0.875rem;
+      }
+      
+      .detail-value {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        
+        .agent-icon {
+          color: #3b82f6;
+        }
+        
+        .system-badge {
+          background-color: #fbbf24;
+          color: #92400e;
+          padding: 2px 6px;
+          border-radius: 8px;
+          font-size: 0.75rem;
+          font-weight: 500;
+        }
+      }
+      
+      .topic-code {
+        background-color: #f3f4f6;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-family: monospace;
+      }
+    }
+  }
+  
+  .description-content {
+    background-color: #f9fafb;
+    padding: $spacing-md;
+    border-radius: 8px;
+    color: $text-primary;
+    line-height: 1.6;
+    border-left: 4px solid #3b82f6;
+  }
+  
+  .capabilities-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    
+    .capability-tag {
+      background-color: #dbeafe;
+      color: #1e40af;
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+  }
+  
+  .system-prompt-content {
+    background-color: #f3f4f6;
+    border-radius: 8px;
+    padding: $spacing-md;
+    border: 1px solid #d1d5db;
+    
+    pre {
+      margin: 0;
+      font-size: 0.875rem;
+      color: $text-primary;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.5;
+      font-family: 'Courier New', monospace;
     }
   }
 }

@@ -20,15 +20,38 @@ class RAGKnowledgeSearchTool(BaseTool):
 
     def _run(self, query: str) -> str:
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            # Check if we're already in an event loop
             try:
-                return loop.run_until_complete(self._async_run(query))
-            finally:
-                loop.close()
+                loop = asyncio.get_running_loop()
+                # If we're in an event loop, we need to use asyncio.create_task
+                # But since _run is sync, we need to handle this differently
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(self._run_in_new_loop, query)
+                    return future.result()
+            except RuntimeError:
+                # No event loop running, safe to create a new one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    return loop.run_until_complete(self._async_run(query))
+                finally:
+                    loop.close()
         except Exception as e:
             logging.error(f"Error during RAG tool execution: {e}")
-            return "An error occurred while searching the knowledge base."
+            logging.error(f"RAG tool error details - kb_id: {self.kb_id}, endpoint: {self.index_endpoint_name}, deployed_index: {self.deployed_index_id}")
+            import traceback
+            logging.error(f"Full traceback: {traceback.format_exc()}")
+            return f"Knowledge base search is temporarily unavailable. Error: {str(e)[:100]}"
+    
+    def _run_in_new_loop(self, query: str) -> str:
+        """Helper method to run async code in a new event loop in a separate thread"""
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(self._async_run(query))
+        finally:
+            loop.close()
     
     async def _async_run(self, query: str) -> str:
         try:
@@ -57,4 +80,11 @@ class RAGKnowledgeSearchTool(BaseTool):
 
         except Exception as e:
             logging.error(f"Error during async RAG tool execution: {e}")
-            return "An error occurred while searching the knowledge base."
+            import traceback
+            logging.error(f"Async RAG tool full traceback: {traceback.format_exc()}")
+            
+            # Check if it's an endpoint not found error
+            if "400 Request contains an invalid argument" in str(e):
+                return "The knowledge base search service is not properly configured. The search endpoint may not exist or may not be accessible."
+            else:
+                return f"Knowledge base search failed. Error: {str(e)[:100]}"

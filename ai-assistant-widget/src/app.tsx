@@ -36,11 +36,11 @@ interface Message {
 
 // Quick action buttons definition
 const QUICK_ACTIONS = [
-    'Tell me about this product',
-    'What are the key features?',
-    'How does this compare to alternatives?',
-    'Is this suitable for my needs?',
-    'What should I consider before buying?'
+    'What is the capacity of the Bamboo Glass Jar in ounces?',
+    'Tell me about the material and neckline of the Tank Top.',
+    'Which product is the most expensive item listed on the homepage?',
+    'I need a simple gift with a mustard interior. What do you have?',
+    'Do you sell any electronic devices, like laptops or phones?'
 ];
 
 
@@ -120,43 +120,64 @@ interface ChatInputProps {
 
 const ChatInput: FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
     const [inputValue, setInputValue] = useState('');
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     
     const handleSend = () => {
+        console.log('handleSend called, inputValue:', inputValue, 'disabled:', disabled); // Debug log
         if (inputValue.trim() && !disabled) {
+            console.log('Calling onSendMessage with:', inputValue.trim()); // Debug log
             onSendMessage(inputValue.trim());
             setInputValue('');
+            // Reset textarea height after sending
+            if (textareaRef.current) {
+                textareaRef.current.style.height = 'auto';
+            }
         }
     };
     
-    const handleKeyPress = (e: KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
-    };
     
     return (
         <div className="chat-input-container">
-            <div className="input-wrapper">
-                <input
-                    type="text"
-                    value={inputValue}
-                    onChange={(e) => setInputValue((e.target as HTMLInputElement).value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type your question..."
-                    disabled={disabled}
-                    className="chat-input"
-                />
-                <button 
-                    onClick={handleSend}
-                    disabled={disabled || !inputValue.trim()}
-                    className="send-btn"
-                >
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                </button>
-            </div>
+            <form onSubmit={(e: any) => {
+                e.preventDefault();
+                handleSend();
+            }}>
+                <div className="input-wrapper">
+                    <textarea
+                        ref={textareaRef}
+                        value={inputValue}
+                        onInput={(e: any) => {
+                            const target = e.target as HTMLTextAreaElement;
+                            setInputValue(target.value);
+                            if (target) {
+                                target.style.height = 'auto';
+                                target.style.height = Math.min(target.scrollHeight, 100) + 'px';
+                            }
+                        }}
+                        onKeyDown={(e: any) => {
+                            console.log('Key pressed:', e.key, 'Shift:', e.shiftKey);
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                console.log('Sending message:', inputValue);
+                                handleSend();
+                            }
+                        }}
+                        placeholder="Type your question... (Press Enter to send, Shift+Enter for new line)"
+                        disabled={disabled}
+                        className="chat-input"
+                        rows={1}
+                    />
+                    <button 
+                        type="submit"
+                        disabled={disabled || !inputValue.trim()}
+                        className="send-btn"
+                    >
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                    </button>
+                </div>
+            </form>
         </div>
     );
 };

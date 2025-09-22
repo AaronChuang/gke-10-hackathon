@@ -1,47 +1,47 @@
 <template>
   <div class="knowledge-base">
     <div class="kb-header">
-      <h2 class="section-title">知識庫管理</h2>
+      <h2 class="section-title">{{ $t('knowledge.title') }}</h2>
       <button @click="showAddModal = true" class="add-btn">
         <i class="fas fa-plus"></i>
-        索引新網站
+        {{ $t('knowledge.addButton') }}
       </button>
     </div>
 
     <div class="stats-overview">
       <div class="stat-card">
         <div class="stat-value">{{ totalEntries }}</div>
-        <div class="stat-label">總網站數</div>
+        <div class="stat-label">{{ $t('knowledge.stats.total') }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ activeEntries }}</div>
-        <div class="stat-label">活躍索引</div>
+        <div class="stat-label">{{ $t('knowledge.stats.active') }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ totalIndexedPages }}</div>
-        <div class="stat-label">已索引頁面</div>
+        <div class="stat-label">{{ $t('knowledge.stats.indexed') }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ processingEntries }}</div>
-        <div class="stat-label">處理中</div>
+        <div class="stat-label">{{ $t('knowledge.stats.processing') }}</div>
       </div>
     </div>
 
     <div class="kb-table-container">
       <div class="table-header">
-        <h3>知識庫列表</h3>
+        <h3>{{ $t('knowledge.table.title') }}</h3>
         <div class="table-controls">
           <select v-model="statusFilter" class="filter-select">
-            <option value="">所有狀態</option>
-            <option value="QUEUED">排隊中</option>
-            <option value="CRAWLING">爬取中</option>
-            <option value="INDEXING">索引中</option>
-            <option value="ACTIVE">活躍</option>
-            <option value="FAILED">失敗</option>
+            <option value="">{{ $t('knowledge.table.allStatus') }}</option>
+            <option value="QUEUED">{{ $t('knowledge.status.queued') }}</option>
+            <option value="CRAWLING">{{ $t('knowledge.status.crawling') }}</option>
+            <option value="INDEXING">{{ $t('knowledge.status.indexing') }}</option>
+            <option value="ACTIVE">{{ $t('knowledge.status.active') }}</option>
+            <option value="FAILED">{{ $t('knowledge.status.failed') }}</option>
           </select>
           <button @click="refreshData" class="refresh-btn">
             <i class="fas fa-sync-alt"></i>
-            刷新
+            {{ $t('knowledge.table.refresh') }}
           </button>
         </div>
       </div>
@@ -50,13 +50,13 @@
         <table class="kb-table">
           <thead>
             <tr>
-              <th>網站 URL</th>
-              <th>狀態</th>
-              <th>進度</th>
-              <th>索引頁面</th>
-              <th>創建時間</th>
-              <th>最後更新</th>
-              <th>操作</th>
+              <th>{{ $t('knowledge.table.url') }}</th>
+              <th>{{ $t('knowledge.table.status') }}</th>
+              <th>{{ $t('knowledge.table.progress') }}</th>
+              <th>{{ $t('knowledge.table.pages') }}</th>
+              <th>{{ $t('knowledge.table.created') }}</th>
+              <th>{{ $t('knowledge.table.updated') }}</th>
+              <th>{{ $t('knowledge.table.actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -100,17 +100,10 @@
                 <button 
                   @click="viewEntryDetails(entry)" 
                   class="action-btn view-btn"
-                  title="查看詳情"
+                  :title="$t('knowledge.table.view')"
                 >
                   <i class="fas fa-eye"></i>
-                </button>
-                <button 
-                  @click="deleteEntry(entry)" 
-                  :disabled="entry.status === 'CRAWLING' || entry.status === 'INDEXING'"
-                  class="action-btn delete-btn"
-                  title="刪除"
-                >
-                  <i class="fas fa-trash"></i>
+                  {{ $t('knowledge.table.view') }}
                 </button>
               </td>
             </tr>
@@ -123,31 +116,37 @@
     <div v-if="showAddModal" class="modal-overlay" @click="closeAddModal">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>索引新網站</h3>
+          <h3>{{ $t('knowledge.modal.add.title') }}</h3>
           <button @click="closeAddModal" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
-          <form @submit.prevent="submitNewWebsite">
-            <div class="form-group">
-              <label for="website-url">網站 URL</label>
-              <input 
-                id="website-url"
-                v-model="newWebsiteUrl" 
-                type="url" 
-                placeholder="https://example.com"
-                required
-                class="form-input"
-              />
-              <small class="form-help">請輸入完整的網站 URL，系統將自動爬取並索引網站內容</small>
+          <div class="demo-notice">
+            <div class="notice-title">
+              <i class="fas fa-info-circle"></i>
+              {{ $t('knowledge.modal.add.demoNotice') }}
             </div>
-            <div class="form-actions">
-              <button type="button" @click="closeAddModal" class="cancel-btn">取消</button>
-              <button type="submit" :disabled="submitting" class="submit-btn">
-                <i v-if="submitting" class="fas fa-spinner fa-spin"></i>
-                {{ submitting ? '提交中...' : '開始索引' }}
-              </button>
-            </div>
-          </form>
+            <p class="notice-description">
+              {{ $t('knowledge.modal.add.demoDescription') }}
+            </p>
+          </div>
+          
+          <div class="form-group">
+            <label for="website-url">{{ $t('knowledge.modal.add.url') }}</label>
+            <input 
+              id="website-url"
+              v-model="newWebsiteUrl" 
+              type="url" 
+              :placeholder="$t('knowledge.modal.add.urlPlaceholder')"
+              disabled
+              class="form-input disabled"
+            />
+            <small class="form-help">{{ $t('knowledge.modal.add.urlHelp') }}</small>
+          </div>
+          <div class="form-actions">
+            <button type="button" @click="closeAddModal" class="cancel-btn">
+              {{ $t('knowledge.modal.add.cancel') }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -156,63 +155,96 @@
     <div v-if="selectedEntry" class="modal-overlay" @click="closeDetailsModal">
       <div class="modal-content large-modal" @click.stop>
         <div class="modal-header">
-          <h3>知識庫詳情</h3>
+          <h3>{{ $t('knowledge.modal.details.title') }}</h3>
           <button @click="closeDetailsModal" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
           <div class="detail-section">
-            <h4>基本信息</h4>
+            <h4>{{ $t('knowledge.modal.details.basicInfo') }}</h4>
             <div class="detail-grid">
               <div class="detail-item">
-                <label>網站 URL:</label>
+                <label>{{ $t('knowledge.modal.details.url') }}</label>
                 <a :href="selectedEntry.url" target="_blank" class="url-link">
                   {{ selectedEntry.url }}
                 </a>
               </div>
               <div class="detail-item">
-                <label>狀態:</label>
+                <label>{{ $t('knowledge.modal.details.status') }}</label>
                 <span :class="['status-badge', getStatusClass(selectedEntry.status)]">
                   {{ getStatusText(selectedEntry.status) }}
                 </span>
               </div>
               <div class="detail-item">
-                <label>創建時間:</label>
+                <label>{{ $t('knowledge.modal.details.created') }}</label>
                 <span>{{ formatTime(selectedEntry.created_at) }}</span>
               </div>
               <div class="detail-item">
-                <label>最後更新:</label>
+                <label>{{ $t('knowledge.modal.details.updated') }}</label>
                 <span>{{ formatTime(selectedEntry.updated_at) }}</span>
               </div>
             </div>
           </div>
 
           <div class="detail-section">
-            <h4>索引統計</h4>
+            <h4>{{ $t('knowledge.modal.details.stats') }}</h4>
             <div class="stats-grid">
               <div class="stat-item">
                 <div class="stat-number">{{ selectedEntry.indexed_pages.toLocaleString() }}</div>
-                <div class="stat-description">已索引頁面</div>
+                <div class="stat-description">{{ $t('knowledge.modal.details.indexedPages') }}</div>
               </div>
               <div class="stat-item">
                 <div class="stat-number">{{ selectedEntry.total_pages.toLocaleString() }}</div>
-                <div class="stat-description">總發現頁面</div>
+                <div class="stat-description">{{ $t('knowledge.modal.details.totalPages') }}</div>
               </div>
               <div class="stat-item">
                 <div class="stat-number">{{ getProgressPercentage(selectedEntry) }}%</div>
-                <div class="stat-description">完成進度</div>
+                <div class="stat-description">{{ $t('knowledge.modal.details.progress') }}</div>
               </div>
             </div>
           </div>
 
           <div v-if="selectedEntry.error_message" class="detail-section">
-            <h4>錯誤信息</h4>
+            <h4>{{ $t('knowledge.modal.details.error') }}</h4>
             <div class="error-message">
               {{ selectedEntry.error_message }}
             </div>
           </div>
 
+          <div v-if="selectedEntry.status === 'ACTIVE'" class="detail-section">
+            <h4>{{ $t('knowledge.modal.details.indexedContent') }}</h4>
+            <div class="content-section">
+              <div class="content-loading" v-if="loadingContent">
+                <i class="fas fa-spinner fa-spin"></i>
+                {{ $t('knowledge.modal.details.loadingContent') }}
+              </div>
+              <div v-else-if="indexedContent.length > 0" class="content-list">
+                <div 
+                  v-for="(content, index) in indexedContent" 
+                  :key="index"
+                  class="content-item"
+                >
+                  <div class="content-header">
+                    <h5 class="content-title">{{ content.title || $t('knowledge.modal.details.untitledPage') }}</h5>
+                    <span class="content-url">{{ content.url }}</span>
+                  </div>
+                  <div class="content-preview">
+                    {{ truncateContent(content.content) }}
+                  </div>
+                  <div class="content-meta">
+                    <span class="content-length">{{ content.content.length }} {{ $t('knowledge.modal.details.characters') }}</span>
+                    <span class="content-chunks">{{ content.chunks || 1 }} {{ $t('knowledge.modal.details.chunks') }}</span>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="no-content">
+                <i class="fas fa-file-alt"></i>
+                <p>{{ $t('knowledge.modal.details.noContent') }}</p>
+              </div>
+            </div>
+          </div>
+
           <div v-if="selectedEntry.metadata && Object.keys(selectedEntry.metadata).length > 0" class="detail-section">
-            <h4>元數據</h4>
+            <h4>{{ $t('knowledge.modal.details.metadata') }}</h4>
             <div class="metadata-content">
               <pre>{{ JSON.stringify(selectedEntry.metadata, null, 2) }}</pre>
             </div>
@@ -224,34 +256,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useKnowledgeBase } from '@/composables/useKnowledgeBase'
 import type { KnowledgeEntry } from '@/types/knowledge'
 
-interface Props {
-  knowledgeEntries: KnowledgeEntry[]
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<{
-  refresh: []
-}>()
+const { t } = useI18n()
+const { knowledgeEntries, loadKnowledgeBase } = useKnowledgeBase()
 
 const statusFilter = ref('')
 const showAddModal = ref(false)
 const selectedEntry = ref<KnowledgeEntry | null>(null)
-const newWebsiteUrl = ref('')
+const newWebsiteUrl = ref('http://35.236.185.81/')
 const submitting = ref(false)
+const loadingContent = ref(false)
+const indexedContent = ref<any[]>([])
 
-const filteredEntries = computed(() => {
-  if (!statusFilter.value) return props.knowledgeEntries
-  return props.knowledgeEntries.filter(entry => entry.status === statusFilter.value)
+// 在組件掛載時載入知識庫數據
+onMounted(() => {
+  loadKnowledgeBase()
 })
 
-const totalEntries = computed(() => props.knowledgeEntries.length)
-const activeEntries = computed(() => props.knowledgeEntries.filter(e => e.status === 'ACTIVE').length)
-const totalIndexedPages = computed(() => props.knowledgeEntries.reduce((sum, e) => sum + e.indexed_pages, 0))
+const filteredEntries = computed(() => {
+  if (!statusFilter.value) return knowledgeEntries.value
+  return knowledgeEntries.value.filter((entry: KnowledgeEntry) => entry.status === statusFilter.value)
+})
+
+const totalEntries = computed(() => knowledgeEntries.value.length)
+const activeEntries = computed(() => knowledgeEntries.value.filter((e: KnowledgeEntry) => e.status === 'ACTIVE').length)
+const totalIndexedPages = computed(() => knowledgeEntries.value.reduce((sum: number, e: KnowledgeEntry) => sum + e.indexed_pages, 0))
 const processingEntries = computed(() => 
-  props.knowledgeEntries.filter(e => e.status === 'CRAWLING' || e.status === 'INDEXING').length
+  knowledgeEntries.value.filter((e: KnowledgeEntry) => e.status === 'CRAWLING' || e.status === 'INDEXING').length
 )
 
 const getRowClass = (status: string) => {
@@ -274,11 +309,11 @@ const getStatusClass = (status: string) => {
 
 const getStatusText = (status: string) => {
   const statusMap: Record<string, string> = {
-    'QUEUED': '排隊中',
-    'CRAWLING': '爬取中',
-    'INDEXING': '索引中',
-    'ACTIVE': '活躍',
-    'FAILED': '失敗'
+    'QUEUED': t('knowledge.status.queued'),
+    'CRAWLING': t('knowledge.status.crawling'),
+    'INDEXING': t('knowledge.status.indexing'),
+    'ACTIVE': t('knowledge.status.active'),
+    'FAILED': t('knowledge.status.failed')
   }
   return statusMap[status] || status
 }
@@ -303,65 +338,87 @@ const truncateUrl = (url: string) => {
   return url.substring(0, 47) + '...'
 }
 
+const truncateContent = (content: string) => {
+  if (content.length <= 200) return content
+  return content.substring(0, 197) + '...'
+}
+
 const formatTime = (timestamp: number) => {
-  return new Date(timestamp * 1000).toLocaleString('zh-TW')
+  const locale = t('common.locale')
+  return new Date(timestamp * 1000).toLocaleString(locale, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
 }
 
 const refreshData = () => {
-  emit('refresh')
+  loadKnowledgeBase()
 }
 
-const submitNewWebsite = async () => {
-  if (!newWebsiteUrl.value) return
+
+const loadIndexedContent = async (kbId: string) => {
+  loadingContent.value = true
+  indexedContent.value = []
   
-  submitting.value = true
   try {
-    // 這裡應該調用 useKnowledgeBase 的 indexWebsite 方法
-    // 為了簡化，我們直接發送 API 請求
-    const response = await fetch('/api/knowledge-base/index', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ url: newWebsiteUrl.value })
-    })
-
-    if (response.ok) {
-      closeAddModal()
-      emit('refresh')
-    } else {
-      const error = await response.json()
-      alert(`索引失敗: ${error.detail || '未知錯誤'}`)
+    // 從 Firebase 獲取知識庫的 chunks 子集合
+    const { collection, getDocs } = await import('firebase/firestore')
+    const { getFirestore } = await import('firebase/firestore')
+    const { initializeApp } = await import('firebase/app')
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBQ8lOT39SnvFqlnnch9G_W8wa0jlfUg5E",
+      authDomain: "gke-10-hackathon-471902.firebaseapp.com",
+      projectId: "gke-10-hackathon-471902",
+      storageBucket: "gke-10-hackathon-471902.firebasestorage.app",
+      messagingSenderId: "679895434316",
+      appId: "1:679895434316:web:9d1183ab38f168d24060e9"
     }
-  } catch (error) {
-    alert(`索引失敗: ${error}`)
-  } finally {
-    submitting.value = false
-  }
-}
-
-
-const deleteEntry = async (entry: KnowledgeEntry) => {
-  if (confirm(`確定要刪除 ${entry.url} 的索引嗎？此操作無法復原。`)) {
-    try {
-      const response = await fetch(`/api/knowledge-base/${entry.kb_id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        emit('refresh')
-      } else {
-        const error = await response.json()
-        alert(`刪除失敗: ${error.detail || '未知錯誤'}`)
+    
+    const app = initializeApp(firebaseConfig)
+    const db = getFirestore(app, "gke-10-hackathon")
+    
+    const chunksRef = collection(db, 'knowledge_base', kbId, 'chunks')
+    const chunksSnapshot = await getDocs(chunksRef)
+    
+    const contentMap = new Map()
+    
+    chunksSnapshot.forEach((doc) => {
+      const data = doc.data()
+      const url = data.url || data.source_url || 'Unknown URL'
+      
+      if (!contentMap.has(url)) {
+        contentMap.set(url, {
+          url: url,
+          title: data.title || data.page_title || '',
+          content: '',
+          chunks: 0
+        })
       }
-    } catch (error) {
-      alert(`刪除失敗: ${error}`)
-    }
+      
+      const existing = contentMap.get(url)
+      existing.content += (data.content || data.text || '') + ' '
+      existing.chunks += 1
+    })
+    
+    indexedContent.value = Array.from(contentMap.values())
+  } catch (err) {
+    console.error('Failed to load indexed content:', err)
+    indexedContent.value = []
+  } finally {
+    loadingContent.value = false
   }
 }
 
 const viewEntryDetails = (entry: KnowledgeEntry) => {
   selectedEntry.value = entry
+  if (entry.status === 'ACTIVE') {
+    loadIndexedContent(entry.kb_id)
+  }
 }
 
 const closeAddModal = () => {
@@ -372,6 +429,8 @@ const closeAddModal = () => {
 
 const closeDetailsModal = () => {
   selectedEntry.value = null
+  indexedContent.value = []
+  loadingContent.value = false
 }
 </script>
 
@@ -675,20 +734,45 @@ const closeDetailsModal = () => {
     &.view-btn {
       background-color: #3b82f6;
       color: white;
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+      padding: $spacing-sm $spacing-md;
       
       &:hover {
         background-color: #2563eb;
       }
     }
     
-    &.delete-btn {
-      background-color: #ef4444;
-      color: white;
-      
-      &:hover:not(:disabled) {
-        background-color: #dc2626;
-      }
+  }
+}
+
+// Demo notice 樣式
+.demo-notice {
+  background-color: #e0f2fe;
+  border: 1px solid #0288d1;
+  border-radius: 8px;
+  padding: $spacing-md;
+  margin-bottom: $spacing-lg;
+  
+  .notice-title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-weight: 600;
+    color: #0277bd;
+    margin-bottom: $spacing-sm;
+    
+    i {
+      color: #0288d1;
     }
+  }
+  
+  .notice-description {
+    color: #01579b;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin: 0;
   }
 }
 
@@ -711,8 +795,9 @@ const closeDetailsModal = () => {
   border-radius: 8px;
   max-width: 500px;
   max-height: 80vh;
-  overflow-y: auto;
   width: 90%;
+  display: flex;
+  flex-direction: column;
   
   &.large-modal {
     max-width: 800px;
@@ -741,6 +826,9 @@ const closeDetailsModal = () => {
 
 .modal-body {
   padding: $spacing-lg;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .form-group {
@@ -764,6 +852,17 @@ const closeDetailsModal = () => {
       outline: none;
       border-color: #3b82f6;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    &.disabled {
+      background-color: #f9fafb;
+      color: #6b7280;
+      cursor: not-allowed;
+      
+      &:focus {
+        border-color: #d1d5db;
+        box-shadow: none;
+      }
     }
   }
   
@@ -880,6 +979,106 @@ const closeDetailsModal = () => {
   padding: $spacing-md;
   border-radius: 6px;
   font-size: 0.875rem;
+}
+
+// 索引內容樣式
+.content-section {
+  .content-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-xl;
+    color: $text-muted;
+    
+    i {
+      animation: spin 1s linear infinite;
+    }
+  }
+  
+  .content-list {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+  }
+  
+  .content-item {
+    padding: $spacing-md;
+    border-bottom: 1px solid #f3f4f6;
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    .content-header {
+      margin-bottom: $spacing-sm;
+      
+      .content-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: $text-primary;
+        margin: 0 0 4px 0;
+      }
+      
+      .content-url {
+        font-size: 0.75rem;
+        color: #3b82f6;
+        text-decoration: none;
+        
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+    
+    .content-preview {
+      font-size: 0.75rem;
+      color: $text-muted;
+      line-height: 1.4;
+      margin-bottom: $spacing-sm;
+      background-color: #f9fafb;
+      padding: $spacing-sm;
+      border-radius: 4px;
+    }
+    
+    .content-meta {
+      display: flex;
+      gap: $spacing-md;
+      font-size: 0.75rem;
+      color: $text-muted;
+      
+      .content-length,
+      .content-chunks {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+    }
+  }
+  
+  .no-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    color: $text-muted;
+    
+    i {
+      font-size: 2rem;
+      margin-bottom: $spacing-sm;
+      opacity: 0.5;
+    }
+    
+    p {
+      margin: 0;
+      font-size: 0.875rem;
+    }
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .metadata-content {

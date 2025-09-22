@@ -22,16 +22,14 @@ class OmniAgent(BaseAgentWrapper):
         
         # Initialize RAG service
         project_id = os.getenv("GCP_PROJECT_ID")
-        location = "us-central1"  # 與 crawler-service 保持一致
-        db = gcp_clients.get_firestore_client()
-        self.rag_service = RAGService(project_id=project_id, location=location, db=db)
+        location = "us-central1"
+        async_db = gcp_clients.get_async_firestore_client()
+        self.rag_service = RAGService(project_id=project_id, location=location, db=async_db)
         
         super().__init__("omni-agent", task_id)
     
     async def _get_active_knowledge_base(self):
-        """獲取可用的知識庫配置"""
         try:
-            # 查詢 Firestore 中狀態為 ACTIVE 的知識庫
             kb_collection = self.rag_service.db.collection("knowledge_base")
             docs = kb_collection.where("status", "==", "ACTIVE").limit(1).stream()
             
@@ -71,10 +69,8 @@ class OmniAgent(BaseAgentWrapper):
         role = self.custom_role or "Omni Intelligence Assistant"
         goal = self.custom_goal or "Provide professional and accurate assistance based on user needs"
         
-        # Create RAG tool - 使用已建立的知識庫
         tools = []
         try:
-            # 嘗試從環境變數或使用默認值獲取知識庫配置
             kb_id = os.getenv("RAG_KB_ID", "kb_35_236_185_81_1758459342")
             endpoint_name = os.getenv("RAG_ENDPOINT_NAME", f"{kb_id.replace('_', '-')}-endpoint")
             deployed_index_id = os.getenv("RAG_DEPLOYED_INDEX_ID", f"deployed_{kb_id}")
@@ -88,7 +84,6 @@ class OmniAgent(BaseAgentWrapper):
             tools.append(rag_tool)
             print(f"Successfully initialized RAG tool with kb_id: {kb_id}")
         except Exception as e:
-            # 如果 RAG 工具初始化失敗，記錄錯誤但繼續創建 agent
             print(f"Warning: Failed to initialize RAG tool: {e}")
         
         return Agent(

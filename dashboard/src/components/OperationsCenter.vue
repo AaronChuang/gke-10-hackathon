@@ -93,7 +93,21 @@
 
     <!-- Conversation History -->
     <div v-if="activeTab === 'conversations'" class="tab-content">
-      <div class="conversation-list">
+      <!-- Debug info -->
+      <div v-if="conversationsLoading" class="loading-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        {{ $t('operations.conversations.loading') }}
+      </div>
+      <div v-else-if="conversationsError" class="error-state">
+        <i class="fas fa-exclamation-triangle"></i>
+        {{ conversationsError }}
+      </div>
+      <div v-else-if="conversations.length === 0" class="empty-state">
+        <i class="fas fa-comments"></i>
+        <p>{{ $t('operations.conversations.noConversations') }}</p>
+      </div>
+      
+      <div v-else class="conversation-list">
         <div v-for="conversation in conversations" :key="conversation.session_id" class="conversation-card">
           <div class="conversation-header">
             <div class="user-info">
@@ -101,8 +115,8 @@
               <span>{{ conversation.context?.user_id || $t('operations.conversations.anonymous') }}</span>
             </div>
             <div class="conversation-meta">
-              <span class="message-count">{{ conversation.summary?.total_messages || 0 }} {{ $t('operations.conversations.messageCount') }}</span>
-              <span class="token-count">{{ formatTokens(conversation.totalTokens || 0) }} {{ $t('operations.conversations.tokens') }}</span>
+              <span class="message-count">{{ conversation.summary.total_messages }} {{ $t('operations.conversations.messageCount') }}</span>
+              <span class="status-badge" :class="getConversationStatusClass(conversation.status)">{{ getConversationStatusText(conversation.status) }}</span>
             </div>
           </div>
           
@@ -188,11 +202,13 @@
             </div>
             <div class="info-row">
               <span class="label">{{ $t('operations.conversations.messageCount') }}:</span>
-              <span>{{ selectedConversation.summary?.total_messages || 0 }}</span>
+              <span>{{ selectedConversation.summary.total_messages }}</span>
             </div>
             <div class="info-row">
-              <span class="label">{{ $t('operations.conversations.tokens') }}:</span>
-              <span>{{ formatTokens(selectedConversation.totalTokens || 0) }}</span>
+              <span class="label">{{ $t('operations.conversations.statusLabel') }}:</span>
+              <span :class="['status-badge', getConversationStatusClass(selectedConversation.status)]">
+                {{ getConversationStatusText(selectedConversation.status) }}
+              </span>
             </div>
             <div class="info-row">
               <span class="label">{{ $t('operations.conversations.lastUpdate') }}:</span>
@@ -259,6 +275,8 @@ const selectedConversation = ref<Conversation | null>(null)
 // Use conversations composable
 const { 
   conversations, 
+  loading: conversationsLoading,
+  error: conversationsError,
   loadConversations 
 } = useConversations()
 
@@ -281,6 +299,21 @@ const getCurrentAgent = (task: Task) => {
   if (!task.agent_history?.length) return t('common.unassigned')
   const latest = task.agent_history[task.agent_history.length - 1]
   return latest.agent_id || t('common.unknown')
+}
+
+const getConversationStatusClass = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'active': return 'status-active'
+    case 'paused': return 'status-paused'
+    case 'completed': return 'status-completed'
+    case 'archived': return 'status-archived'
+    default: return 'status-unknown'
+  }
+}
+
+const getConversationStatusText = (status: string) => {
+  const statusKey = status.toLowerCase()
+  return t(`operations.conversations.status.${statusKey}`) || status
 }
 
 const formatTokens = (tokens: number) => {
@@ -485,6 +518,38 @@ onMounted(() => {
   }
 
   &.failed {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+}
+
+.status-badge {
+  padding: $spacing-xs $spacing-sm;
+  border-radius: 6px;
+  font-size: $font-xs;
+  font-weight: 500;
+
+  &.status-active {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  &.status-paused {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  &.status-completed {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  &.status-archived {
+    background: #f3f4f6;
+    color: #6b7280;
+  }
+
+  &.status-unknown {
     background: #fee2e2;
     color: #991b1b;
   }
@@ -709,6 +774,43 @@ onMounted(() => {
       white-space: pre-wrap;
     }
   }
+}
+
+// 狀態顯示樣式
+.loading-state, .error-state, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  color: $text-muted;
+  
+  i {
+    font-size: 2rem;
+    margin-bottom: $spacing-md;
+    
+    &.fa-spinner {
+      animation: spin 1s linear infinite;
+    }
+  }
+  
+  p {
+    margin: 0;
+    font-size: $font-base;
+  }
+}
+
+.error-state {
+  color: #dc2626;
+  
+  i {
+    color: #ef4444;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .conversation-modal {

@@ -35,12 +35,18 @@
       "you": "You",
       "consultant": "Business Consultant AI",
       "typing": "Typing..."
+    },
+    "errors": {
+      "networkError": "Network request failed",
+      "noResponse": "Sorry, I cannot provide advice right now. Please try again later.",
+      "sendFailed": "Failed to send message:",
+      "connectionError": "Sorry, I cannot respond to your question right now. Please check your network connection or try again later."
     }
   },
   "agents": {
-    "title": "HR - Agent Management",
-    "subtitle": "Create, edit, enable/disable company's professional departments",
-    "createButton": "Create New Agent",
+    "title": "AI Agent Management",
+    "subtitle": "Manage and monitor your AI agents",
+    "createButton": "Create Agent",
     "stats": {
       "total": "Total Agents",
       "active": "Active Agents",
@@ -49,17 +55,14 @@
     },
     "table": {
       "title": "Agent List",
-      "refresh": "Refresh",
       "allStatus": "All Status",
       "name": "Name",
       "description": "Description",
       "status": "Status",
       "capabilities": "Capabilities",
-      "topic": "PubSub Topic",
+      "topic": "Pub/Sub Topic",
       "created": "Created",
-      "actions": "Actions",
-      "edit": "Edit",
-      "delete": "Delete"
+      "actions": "Actions"
     },
     "status": {
       "active": "Active",
@@ -67,20 +70,63 @@
       "creating": "Creating",
       "failed": "Failed"
     },
-    "modal": {
-      "create": "Create Agent",
-      "edit": "Edit Agent",
-      "close": "Close",
-      "save": "Save",
-      "saving": "Saving...",
-      "cancel": "Cancel",
+    "actions": {
+      "viewDetails": "View Details"
+    },
+    "create": {
+      "title": "Create New Agent",
       "name": "Agent Name",
-      "namePlaceholder": "e.g., Fashion Stylist Agent",
+      "namePlaceholder": "e.g., MarketingAgent",
+      "pubsubTopic": "Pub/Sub Topic",
+      "pubsubTopicPlaceholder": "e.g., marketing-agent-topic",
+      "pubsubTopicHelp": "Leave empty to auto-generate",
       "description": "Description",
-      "descriptionPlaceholder": "Describe the agent's role and capabilities...",
-      "model": "AI Model",
-      "tools": "Available Tools",
-      "enable": "Enable this agent"
+      "descriptionPlaceholder": "Describe the agent's main functions and purposes...",
+      "capabilities": "Capability Tags",
+      "capabilityPlaceholder": "Enter capability tag and press Enter",
+      "capabilityHelp": "e.g., Content Writing, Market Analysis, Data Processing",
+      "systemPrompt": "System Prompt",
+      "systemPromptPlaceholder": "Define the agent's role, behavior and response style...",
+      "systemPromptHelp": "This will determine the agent's personality and expertise",
+      "creating": "Creating...",
+      "submit": "Create Agent"
+    },
+    "details": {
+      "title": "Agent Details",
+      "basicInfo": "Basic Information",
+      "name": "Name",
+      "status": "Status",
+      "created": "Created Time",
+      "pubsubTopic": "Pub/Sub Topic",
+      "description": "Description",
+      "capabilities": "Capabilities",
+      "systemPrompt": "System Prompt"
+    },
+    "developmentNotice": {
+      "title": "🚧 Under Development: Dynamic AI Agent Management System 🚧",
+      "intro": "Welcome to the management core of the AI agent ecosystem! The complete functionality of this page is still under active development. What you see here is the final architectural blueprint we've designed. We envision a dynamic framework that enables 'AI Organization Self-Expansion':",
+      "features": {
+        "onboarding": {
+          "title": "🤖 Fully Automated Agent Onboarding",
+          "description": "All new agent creation will be initiated by the core OrchestratorAgent (CEO). It acts like an HR manager, intelligently generating new agent configurations (such as Prompts and tool suggestions) based on your job description input, and establishing personnel files in Firestore's 'Agent Registry'."
+        },
+        "provisioning": {
+          "title": "🚀 Dynamic Infrastructure as Code Provisioning",
+          "description": "Once an agent's personnel file is created, the system automatically triggers a process: using omni-agent-deployment.yaml as a template, it parametrically deploys a dedicated GKE Pod for this new 'employee' and opens an independent Pub/Sub 'internal communication channel'."
+        },
+        "registration": {
+          "title": "📡 Event-Driven Service Registration",
+          "description": "After the newly deployed Pod starts up, it actively announces to the system 'I'm online!' A resident agent-registry-listener service captures this signal and updates the agent's status to ACTIVE in the registry, making it officially a member capable of accepting tasks."
+        },
+        "delegation": {
+          "title": "🤝 Decentralized, Intelligent Delegation",
+          "description": "In this ecosystem, any agent (not just the Orchestrator) can query the 'Agent Registry' after receiving a task to understand all colleagues' capabilities. This enables them to forward tasks to the most suitable expert agent based on current context, achieving efficient A2A (Agent-to-Agent) collaboration."
+        },
+        "guardrails": {
+          "title": "🛡️ Built-in Anti-Loop Guardrails",
+          "description": "To ensure system stability and resource efficiency, we've designed tracking mechanisms in Firestore's task management. Any task can only be handled by the same agent a maximum of twice. If it's transferred back to the same agent for a third time, the task will be forcibly terminated and marked as an error to avoid infinite loops."
+        }
+      }
     }
   },
   "operations": {
@@ -132,7 +178,17 @@
       "user": "User",
       "agent": "Agent",
       "lastUpdate": "Last Update",
-      "messages": "Messages"
+      "messages": "Messages",
+      "statusLabel": "Status",
+      "status": {
+        "active": "Active",
+        "paused": "Paused",
+        "completed": "Completed",
+        "archived": "Archived"
+      },
+      "loading": "Loading conversations...",
+      "noConversations": "No conversations available",
+      "error": "Failed to load conversations"
     }
   },
   "common": {
@@ -143,14 +199,84 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
-    "create": "Create",
+    "view": "View",
     "close": "Close",
     "confirm": "Confirm",
     "system": "System",
     "unassigned": "Unassigned",
     "unknown": "Unknown",
+    "locale": "en-US",
     "unset": "Not set",
     "switchLanguage": "Switch Language"
+  },
+  "knowledge": {
+    "title": "Knowledge Base Management",
+    "subtitle": "Manage website indexing and knowledge base content",
+    "addButton": "Index New Website",
+    "stats": {
+      "total": "Total Websites",
+      "active": "Active Indexes",
+      "indexed": "Indexed Pages",
+      "processing": "Processing"
+    },
+    "table": {
+      "title": "Knowledge Base List",
+      "refresh": "Refresh",
+      "allStatus": "All Status",
+      "url": "Website URL",
+      "status": "Status",
+      "progress": "Progress",
+      "pages": "Indexed Pages",
+      "created": "Created Time",
+      "updated": "Last Updated",
+      "actions": "Actions",
+      "view": "View Details"
+    },
+    "status": {
+      "queued": "Queued",
+      "crawling": "Crawling",
+      "indexing": "Indexing",
+      "active": "Active",
+      "failed": "Failed"
+    },
+    "modal": {
+      "add": {
+        "title": "Index New Website",
+        "url": "Website URL",
+        "urlPlaceholder": "https://example.com",
+        "urlHelp": "Enter the complete website URL, the system will automatically crawl and index the website content",
+        "demoNotice": "Website Demo - For Initial Knowledge Base Setup",
+        "demoDescription": "This is a demonstration version. The system will call the Orchestrator service to build a RAG knowledge base through Cloud Run, storing data in Firebase and Vertex AI Search for intelligent retrieval.",
+        "cancel": "Cancel",
+        "submit": "Start Indexing",
+        "submitting": "Submitting..."
+      },
+      "details": {
+        "title": "Knowledge Base Details",
+        "basicInfo": "Basic Information",
+        "url": "Website URL:",
+        "status": "Status:",
+        "created": "Created Time:",
+        "updated": "Last Updated:",
+        "stats": "Indexing Statistics",
+        "indexedPages": "Indexed Pages",
+        "totalPages": "Total Discovered Pages",
+        "progress": "Completion Progress",
+        "error": "Error Information",
+        "metadata": "Metadata",
+        "indexedContent": "Indexed Content",
+        "loadingContent": "Loading content...",
+        "noContent": "No content available",
+        "untitledPage": "Untitled Page",
+        "characters": "characters",
+        "chunks": "chunks"
+      }
+    },
+    "errors": {
+      "indexFailed": "Indexing failed: {error}",
+      "loadFailed": "Failed to load knowledge base data",
+      "unknown": "Unknown error"
+    }
   },
   "loading": {
     "tasks": "Loading task data...",

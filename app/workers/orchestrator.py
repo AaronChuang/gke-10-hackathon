@@ -1,7 +1,6 @@
 import os
 import uuid
 import logging
-from contextlib import asynccontextmanager
 
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, status
@@ -47,13 +46,13 @@ app.add_middleware(
 db = gcp_clients.get_firestore_client()
 publisher = gcp_clients.get_publisher_client()
 
-# 延遲初始化 agents，避免在模組載入時就失敗
 orchestrator_agent = None
 agent_registry_service = None
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+@app.on_event("startup")
+async def startup_event():
+    """FastAPI startup event handler"""
     global orchestrator_agent, agent_registry_service
 
     try:
@@ -65,7 +64,6 @@ async def lifespan(app: FastAPI):
         await initialize_system()
     except Exception as e:
         logger.error(f"Failed to initialize agents during startup: {e}")
-    yield
 
 
 async def initialize_system():
@@ -150,7 +148,6 @@ async def update_agent(agent_id: str, updates: dict):
 @app.delete("/api/agents/{agent_id}")
 async def delete_agent(agent_id: str):
     """Delete agent"""
-    check_services_initialized()
     try:
         success = await agent_registry_service.delete_agent(agent_id)
         if not success:
